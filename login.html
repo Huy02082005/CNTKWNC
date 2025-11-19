@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng nhập Admin</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .login-container {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+      width: 400px;
+      padding: 40px;
+      text-align: center;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      color: #333;
+      margin-bottom: 30px;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 500;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e1e5ee;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 15px;
+      margin-top: 30px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .login-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .error-message {
+      color: #e74c3c;
+      margin-top: 15px;
+      padding: 10px;
+      background: #ffeaea;
+      border-radius: 5px;
+      display: none;
+    }
+
+    .loading {
+      display: none;
+      margin-top: 15px;
+    }
+
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-left-color: #667eea;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .footer {
+      margin-top: 20px;
+    }
+
+    .footer a{
+        text-decoration: none;
+        color: #6c757d;
+        font-size: 14px;
+        transition: 0.3s ease;
+    }
+
+    .footer a:hover{
+        color: rgb(64, 136, 244);
+        text-decoration: underline;
+    }
+
+    @media (max-width: 480px) {
+      .login-container {
+        width: 90%;
+        padding: 30px 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="login-container">
+    <h2>Đăng nhập Admin</h2>
+    
+    <!-- XÓA FORM - CHỈ DÙNG DIV -->
+    <div>
+      <div class="input-group">
+        <label for="username">Tài khoản</label>
+        <input type="text" id="username" placeholder="Nhập tài khoản" autocomplete="username">
+      </div>
+      
+      <div class="input-group">
+        <label for="password">Mật khẩu</label>
+        <input type="password" id="password" placeholder="Nhập mật khẩu" autocomplete="current-password">
+      </div>
+      
+      <div class="error-message" id="errorMessage"></div>
+      
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Đang đăng nhập...</p>
+      </div>
+      
+      <div class="button-group">
+        <!-- DÙNG type="button" để không submit form -->
+        <button type="button" class="login-btn" onclick="login()">Đăng nhập</button>
+      </div>
+    </div>
+    
+    <div class="footer">
+        <a href="forgotpassword.html">Quên mật khẩu?</a>
+    </div>
+  </div>
+
+  <script>
+    function login() {
+        console.log("🚀 login() function called - NO RELOAD");
+        
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+
+        if (!username || !password) {
+            showError("Vui lòng nhập đầy đủ thông tin");
+            return;
+        }
+
+        console.log("🔐 Đang đăng nhập với:", username);
+
+        showLoading();
+        hideError();
+
+        const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout: Server không phản hồi')), 10000);
+        });
+
+        Promise.race([
+        fetch("http://localhost:3000/auth/login", { 
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password })
+        }),
+        timeoutPromise
+        ])
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Lỗi kết nối server: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("✅ Response data:", data);
+            hideLoading();
+            
+            if (data.message === "Đăng nhập thành công") {
+                localStorage.setItem("logged", "true");
+                localStorage.setItem("role", data.role);
+                localStorage.setItem("username", data.username);
+                
+                console.log("👤 User role:", data.role);
+                
+                if (data.role === "admin") {
+                    window.location.href = "dashboard.html";
+                } else {
+                    showError("❌ Bạn không có quyền truy cập trang admin!");
+                }
+            } else {
+                showError("Sai tài khoản hoặc mật khẩu");
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('❌ Lỗi:', error);
+            showError("Lỗi: " + error.message);
+        });
+    }
+    // Enter để đăng nhập
+    document.getElementById('password').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            login();
+        }
+    });
+
+    function showError(message) {
+        const errorElement = document.getElementById('errorMessage');
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+    }
+
+    function hideError() {
+        document.getElementById('errorMessage').style.display = 'none';
+    }
+
+    function showLoading() {
+        document.getElementById('loading').style.display = 'block';
+    }
+
+    function hideLoading() {
+        document.getElementById('loading').style.display = 'none';
+    }
+
+    // Focus vào input username khi trang load
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("✅ Page loaded");
+        document.getElementById("username").focus();
+        
+        // Kiểm tra nếu đã đăng nhập
+        const logged = localStorage.getItem("logged");
+        if (logged === "true") {
+            window.location.href = "dashboard.html";
+        }
+    });
+  </script>
+</body>
+</html>

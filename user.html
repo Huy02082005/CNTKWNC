@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý người dùng - Admin</title>
+  <style>
+    :root {
+      --primary: #4361ee;
+      --secondary: #3f37c9;
+      --success: #4cc9f0;
+      --warning: #f72585;
+      --dark: #1d3557;
+      --light: #f8f9fa;
+      --sidebar-width: 250px;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: #f5f7fb;
+      color: #333;
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* Sidebar (giống dashboard) */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: linear-gradient(to bottom, var(--primary), var(--secondary));
+      color: white;
+      height: 100vh;
+      position: fixed;
+      transition: all 0.3s;
+      box-shadow: 3px 0 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .sidebar-header {
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .sidebar-header h2 {
+      font-size: 1.5rem;
+      margin-bottom: 5px;
+    }
+    
+    .sidebar-menu {
+      padding: 20px 0;
+    }
+    
+    .sidebar-menu ul {
+      list-style: none;
+    }
+    
+    .sidebar-menu li {
+      padding: 12px 20px;
+      transition: all 0.3s;
+    }
+    
+    .sidebar-menu li:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-left: 4px solid white;
+    }
+    
+    .sidebar-menu li.active {
+      background-color: rgba(255, 255, 255, 0.2);
+      border-left: 4px solid white;
+    }
+    
+    .sidebar-menu a {
+      color: white;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+    }
+    
+    .sidebar-menu i {
+      margin-right: 10px;
+      font-size: 1.2rem;
+    }
+    
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      padding: 20px;
+      transition: all 0.3s;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .header h1 {
+      color: var(--dark);
+      font-size: 1.8rem;
+    }
+    
+    .user-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    /* Stats Cards */
+    .stats-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    
+    .stat-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .stat-info h3 {
+      font-size: 0.9rem;
+      color: #6c757d;
+      margin-bottom: 5px;
+    }
+    
+    .stat-info h2 {
+      font-size: 1.8rem;
+      color: var(--dark);
+    }
+    
+    .stat-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: white;
+    }
+    
+    .bg-primary { background-color: var(--primary); }
+    .bg-success { background-color: var(--success); }
+    .bg-warning { background-color: var(--warning); }
+    
+    /* Table Container */
+    .table-container {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .table-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    /* Search and Filter */
+    .search-filter {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .search-box {
+      flex: 1;
+      min-width: 300px;
+    }
+    
+    .search-box input {
+      width: 100%;
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    
+    .filter-select {
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background: white;
+      min-width: 150px;
+    }
+    
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    th {
+      background-color: #f8f9fa;
+      color: var(--dark);
+      font-weight: 600;
+    }
+    
+    tr:hover {
+      background-color: #f8f9fa;
+    }
+    
+    .user-avatar {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+    }
+    
+    .role {
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    
+    .role.admin {
+      background-color: rgba(247, 37, 133, 0.2);
+      color: var(--warning);
+    }
+    
+    .role.customer {
+      background-color: rgba(67, 97, 238, 0.2);
+      color: var(--primary);
+    }
+    
+    /* Buttons */
+    .btn {
+      padding: 8px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s;
+      font-size: 0.9rem;
+    }
+    
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--secondary);
+    }
+    
+    .btn-outline {
+      background-color: transparent;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+    }
+    
+    .btn-outline:hover {
+      background-color: var(--primary);
+      color: white;
+    }
+    
+    .btn-danger {
+      background-color: var(--warning);
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background-color: #d21e6d;
+    }
+
+    .edit-btn, .delete-btn {
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .edit-btn:hover {
+        background-color: var(--primary) !important;
+        color: white !important;
+    }
+
+    .delete-btn:hover {
+        background-color: var(--warning) !important;
+        color: white !important;
+    }
+
+    .btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    margin: 2px;
+    }
+    
+    /* Pagination */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .pagination button {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    
+    .pagination button.active {
+      background-color: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 70px;
+      }
+      
+      .sidebar-header h2, .sidebar-menu span {
+        display: none;
+      }
+      
+      .sidebar-menu i {
+        margin-right: 0;
+        font-size: 1.5rem;
+      }
+      
+      .main-content {
+        margin-left: 70px;
+      }
+      
+      .search-filter {
+        flex-direction: column;
+      }
+      
+      .search-box {
+        min-width: auto;
+      }
+    }
+    /* THÊM VÀO PHẦN CSS TRONG user.html */
+  .role.admin {
+      background-color: rgba(247, 37, 133, 0.2);
+      color: var(--warning);
+      white-space: nowrap; /* KHÔNG XUỐNG DÒNG */
+      display: inline-block;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+  }
+
+  .role.customer {
+      background-color: rgba(67, 97, 238, 0.2);
+      color: var(--primary);
+      white-space: nowrap;
+      display: inline-block;
+  }
+
+  /* ĐẢM BẢO CÁC CỘT CÓ ĐỦ KHÔNG GIAN */
+  th:nth-child(4), td:nth-child(4) { /* CỘT VAI TRÒ */
+      min-width: 120px;
+  }
+
+  th:nth-child(5), td:nth-child(5) { /* CỘT TRẠNG THÁI */
+      min-width: 130px;
+  }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Admin Dashboard</h2>
+      <p>Quản trị hệ thống</p>
+    </div>
+    
+    <div class="sidebar-menu">
+      <ul>
+        <li><a href="dashboard.html"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+        <li class="active"><a href="users.html"><i class="fas fa-users"></i> <span>Quản lý người dùng</span></a></li>
+        <li><a href="orders.html"><i class="fas fa-shopping-cart"></i> <span>Đơn hàng</span></a></li>
+        <li><a href="products.html"><i class="fas fa-box"></i> <span>Sản phẩm</span></a></li>
+        <li><a href="statistics.html"><i class="fas fa-chart-bar"></i> <span>Thống kê</span></a></li>
+        <li><a href="#"><i class="fas fa-cog"></i> <span>Cài đặt</span></a></li>
+        <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span></a></li>
+      </ul>
+    </div>
+  </div>
+  
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="header">
+      <h1><i class="fas fa-users"></i> Quản lý người dùng</h1>
+      <div class="user-actions">
+        <button class="btn btn-primary" onclick="showAddUserModal()">
+          <i class="fas fa-plus"></i> Thêm người dùng
+        </button>
+        <button class="btn btn-outline" onclick="exportUsers()">
+          <i class="fas fa-download"></i> Export
+        </button>
+      </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="stats-cards">
+      <div class="card">
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Tổng người dùng</h3>
+            <h2 id="totalUsers">0</h2>
+          </div>
+          <div class="stat-icon bg-primary">
+            <i class="fas fa-users"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Khách hàng</h3>
+            <h2 id="totalCustomers">0</h2>
+          </div>
+          <div class="stat-icon bg-success">
+            <i class="fas fa-user"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Quản trị viên</h3>
+            <h2 id="totalAdmins">0</h2>
+          </div>
+          <div class="stat-icon bg-warning">
+            <i class="fas fa-user-shield"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Search and Filter -->
+    <div class="search-filter">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Tìm kiếm theo tên, email, username..." onkeyup="filterUsers()">
+      </div>
+      <select class="filter-select" id="roleFilter" onchange="filterUsers()">
+        <option value="">Tất cả vai trò</option>
+        <option value="admin">Quản trị viên</option>
+        <option value="customer">Khách hàng</option>
+      </select>
+    </div>
+    
+    <!-- Users Table -->
+    <div class="table-container">
+      <div class="table-header">
+        <h2>Danh sách người dùng</h2>
+        <div class="table-actions">
+          <button class="btn btn-outline" onclick="reloadUsers()">
+            <i class="fas fa-sync-alt"></i> Làm mới
+          </button>
+        </div>
+      </div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Người dùng</th>
+            <th>Thông tin liên hệ</th>
+            <th>Ngày tham gia</th>
+            <th>Vai trò</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <!-- Dữ liệu sẽ được thêm bằng JavaScript -->
+        </tbody>
+      </table>
+      
+      <!-- Pagination -->
+      <div class="pagination" id="pagination">
+        <!-- Pagination sẽ được thêm bằng JavaScript -->
+      </div>
+    </div>
+  </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 500px;">
+            <h2 style="margin-bottom: 20px;"><i class="fas fa-edit"></i> Sửa thông tin người dùng</h2>
+            
+            <form id="editUserForm">
+            <input type="hidden" id="editUserId">
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Họ tên *</label>
+                <input type="text" id="editFullName" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Email *</label>
+                <input type="email" id="editEmail" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Số điện thoại</label>
+                <input type="tel" id="editPhone" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Địa chỉ</label>
+                <textarea id="editAddress" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; height: 80px;"></textarea>
+            </div>
+            
+            <!-- THÊM TRƯỜNG VAI TRÒ VÀO ĐÂY -->
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Vai trò</label>
+                <select id="editRole" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    <option value="customer">Khách hàng</option>
+                    <option value="admin">Quản trị viên</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 25px;">
+                <button type="button" class="btn btn-outline" onclick="closeEditModal()" style="flex: 1;">Hủy</button>
+                <button type="submit" class="btn btn-primary" style="flex: 1;">Cập nhật</button>
+            </div>
+            </form>
+        </div>
+    </div>
+    <!-- Add User Modal -->
+    <div id="addUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 500px;">
+            <h2 style="margin-bottom: 20px;"><i class="fas fa-user-plus"></i> Thêm người dùng mới</h2>
+            
+            <form id="addUserForm">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Họ tên *</label>
+                    <input type="text" id="fullName" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Email *</label>
+                    <input type="email" id="email" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Số điện thoại</label>
+                    <input type="tel" id="phone" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Địa chỉ</label>
+                    <textarea id="address" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; height: 80px;"></textarea>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Vai trò</label>
+                    <select id="role" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                        <option value="customer">Khách hàng</option>
+                        <option value="admin">Quản trị viên</option>
+                    </select>
+                </div>
+          
+                <div style="display: flex; gap: 10px; margin-top: 25px;">
+                    <button type="button" class="btn btn-outline" onclick="closeModal()" style="flex: 1;">Hủy</button>
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Thêm người dùng</button>
+                </div>
+            </form>
+        </div>
+    </div>
+  <script>
+    let allUsers = [];
+    let currentPage = 1;
+    const usersPerPage = 10;
+
+    // Kiểm tra đăng nhập
+    document.addEventListener('DOMContentLoaded', function() {
+      const logged = localStorage.getItem("logged");
+      const role = localStorage.getItem("role");
+      
+      if (logged !== "true" || role !== "admin") {
+        alert("Bạn không có quyền truy cập!");
+        window.location.href = "/login.html";
+        return;
+      }
+      
+      loadUsers();
+    });
+
+    // Trong hàm loadUsers() - THÊM LOG NÀY
+async function loadUsers() {
+  try {
+    console.log("🔄 Đang tải danh sách người dùng...");
+    
+    const response = await fetch('/customer');
+    if (!response.ok) throw new Error('Lỗi khi tải người dùng');
+    
+    const customers = await response.json();
+    console.log("👥 USERS DATA FROM API:", customers);
+    
+    // KIỂM TRA DỮ LIỆU THỰC TẾ
+    customers.forEach((user, index) => {
+      console.log(`User ${index}:`, {
+        ID: user.CustomerID,
+        Name: user.FullName,
+        Role: user.Role,
+        Status: user.AccountStatus
+      });
+    });
+    
+    allUsers = customers;
+    updateUsersStats(customers);
+    displayUsers(customers);
+    
+  } catch (error) {
+    console.error('❌ Lỗi khi tải người dùng:', error);
+    showFallbackData();
+  }
+}
+
+    // Cập nhật thống kê - SỬA HÀM NÀY
+    function updateUsersStats(users) {
+        const totalUsers = users.length;
+        const totalCustomers = users.filter(user => user.Role === 'customer' || !user.Role).length;
+        const totalAdmins = users.filter(user => user.Role === 'admin').length;
+        
+        console.log("📊 Stats - Total:", totalUsers, "Customers:", totalCustomers, "Admins:", totalAdmins);
+        
+        document.getElementById('totalUsers').textContent = totalUsers;
+        document.getElementById('totalCustomers').textContent = totalCustomers;
+        document.getElementById('totalAdmins').textContent = totalAdmins;
+    }
+
+    // Hiển thị danh sách người dùng
+ function displayUsers(users) {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) {
+        console.error("❌ Không tìm thấy usersTableBody");
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    
+    if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px;">Không tìm thấy người dùng nào</td></tr>';
+        return;
+    }
+    
+    // Phân trang
+    const startIndex = (currentPage - 1) * usersPerPage;
+    const paginatedUsers = users.slice(startIndex, startIndex + usersPerPage);
+    
+    paginatedUsers.forEach(user => {
+        const row = document.createElement('tr');
+        
+        const avatarIndex = (user.CustomerID % 70) + 1;
+        
+        row.innerHTML = `
+        <td>
+            <div class="user-info">
+            <img src="https://i.pravatar.cc/150?img=${avatarIndex}" 
+                alt="Avatar" class="user-avatar">
+            <div>
+                <strong>${user.FullName || 'Chưa có tên'}</strong>
+                <br>
+                <small style="color: #666;">${user.Username || 'username'}</small>
+            </div>
+            </div>
+        </td>
+        <td>
+            <div>
+            <strong>${user.Email || 'Chưa có email'}</strong>
+            <br>
+            <small style="color: #666;">${user.Phone || 'Chưa có số ĐT'}</small>
+            </div>
+        </td>
+        <td>${formatDate(user.RegisterDate)}</td>
+        <td>
+            <span class="role ${user.Role === 'admin' ? 'admin' : 'customer'}">
+            ${user.Role === 'admin' ? 'Quản trị viên' : 'Khách hàng'}
+            </span>
+        </td>
+        <td>
+            <button class="btn btn-outline btn-sm edit-btn" data-id="${user.CustomerID}">
+            <i class="fas fa-edit"></i> Sửa
+            </button>
+            <button class="btn btn-danger btn-sm delete-btn" data-id="${user.CustomerID}">
+            <i class="fas fa-trash"></i> Xóa
+            </button>
+        </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    // Hiển thị phân trang
+    setupPagination(users.length);
+}
+
+// THÊM EVENT DELEGATION CHO TOÀN BỘ TABLE
+document.addEventListener('DOMContentLoaded', function() {
+    // Event delegation cho nút Sửa và Xóa
+    document.getElementById('usersTableBody').addEventListener('click', function(e) {
+        const target = e.target;
+        
+        // Nút Sửa
+        if (target.classList.contains('edit-btn') || target.closest('.edit-btn')) {
+            const btn = target.classList.contains('edit-btn') ? target : target.closest('.edit-btn');
+            const userId = btn.getAttribute('data-id');
+            console.log("✏️ Edit clicked:", userId);
+            editUser(parseInt(userId));
+        }
+        
+        // Nút Xóa
+        if (target.classList.contains('delete-btn') || target.closest('.delete-btn')) {
+            const btn = target.classList.contains('delete-btn') ? target : target.closest('.delete-btn');
+            const userId = btn.getAttribute('data-id');
+            console.log("🗑️ Delete clicked:", userId);
+            deleteUser(parseInt(userId));
+        }
+    });
+    
+    // Kiểm tra đăng nhập và load users
+    const logged = localStorage.getItem("logged");
+    const role = localStorage.getItem("role");
+    
+    if (logged !== "true" || role !== "admin") {
+        alert("Bạn không có quyền truy cập!");
+        window.location.href = "/login.html";
+        return;
+    }
+    
+    loadUsers();
+});
+
+
+    // Lọc người dùng
+function filterUsers() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const roleFilter = document.getElementById('roleFilter').value;
+    
+    console.log("🔍 Filtering - Search:", searchTerm, "Role:", roleFilter);
+    
+    let filteredUsers = allUsers.filter(user => {
+        const matchesSearch = !searchTerm || 
+            (user.FullName && user.FullName.toLowerCase().includes(searchTerm)) ||
+            (user.Email && user.Email.toLowerCase().includes(searchTerm)) ||
+            (user.Username && user.Username.toLowerCase().includes(searchTerm));
+        
+        // FIX: Lọc theo role chính xác
+        const matchesRole = !roleFilter || 
+            (roleFilter === 'admin' && user.Role === 'admin') ||
+            (roleFilter === 'customer' && (user.Role === 'customer' || !user.Role));
+        
+        console.log(`User ${user.FullName}: Role=${user.Role}, matchesRole=${matchesRole}`);
+        
+        return matchesSearch && matchesRole;
+    });
+    
+    console.log("📊 Filtered users:", filteredUsers.length);
+    
+    currentPage = 1;
+    displayUsers(filteredUsers);
+}
+
+    // Phân trang
+    function setupPagination(totalUsers) {
+      const pagination = document.getElementById('pagination');
+      const totalPages = Math.ceil(totalUsers / usersPerPage);
+      
+      pagination.innerHTML = '';
+      
+      if (totalPages <= 1) return;
+      
+      // Nút Previous
+      const prevButton = document.createElement('button');
+      prevButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
+      prevButton.disabled = currentPage === 1;
+      prevButton.onclick = () => {
+        if (currentPage > 1) {
+          currentPage--;
+          displayUsers(allUsers);
+        }
+      };
+      pagination.appendChild(prevButton);
+      
+      // Các nút trang
+      for (let i = 1; i <= totalPages; i++) {
+        const pageButton = document.createElement('button');
+        pageButton.textContent = i;
+        pageButton.className = currentPage === i ? 'active' : '';
+        pageButton.onclick = () => {
+          currentPage = i;
+          displayUsers(allUsers);
+        };
+        pagination.appendChild(pageButton);
+      }
+      
+      // Nút Next
+      const nextButton = document.createElement('button');
+      nextButton.innerHTML = '<i class="fas fa-chevron-right"></i>';
+      nextButton.disabled = currentPage === totalPages;
+      nextButton.onclick = () => {
+        if (currentPage < totalPages) {
+          currentPage++;
+          displayUsers(allUsers);
+        }
+      };
+      pagination.appendChild(nextButton);
+    }
+
+    // Hàm phụ trợ
+    function formatDate(dateString) {
+      if (!dateString) return 'Chưa có ngày';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('vi-VN');
+    }
+
+    function reloadUsers() {
+      loadUsers();
+    }
+
+    function showAddUserModal() {
+      alert('Chức năng thêm người dùng sẽ được phát triển sau!');
+    }
+
+    function editUser(userId) {
+      alert(`Sửa người dùng ID: ${userId} - Chức năng đang phát triển!`);
+    }
+
+    function deleteUser(userId) {
+      if (confirm('Bạn có chắc muốn xóa người dùng này?')) {
+        alert(`Xóa người dùng ID: ${userId} - Chức năng đang phát triển!`);
+      }
+    }
+
+    function exportUsers() {
+      alert('Chức năng export sẽ được phát triển sau!');
+    }
+
+    function logout() {
+      localStorage.removeItem("logged");
+      localStorage.removeItem("role");
+      localStorage.removeItem("username");
+      window.location.href = "/login.html";
+    }
+
+    // Dữ liệu mẫu nếu API lỗi
+    function showFallbackData() {
+      document.getElementById('totalUsers').textContent = '109';
+      document.getElementById('totalCustomers').textContent = '107';
+      document.getElementById('totalAdmins').textContent = '2';
+      
+      const tbody = document.getElementById('usersTableBody');
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 40px; color: #666;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px;"></i>
+            <br>
+            Không thể tải dữ liệu người dùng
+            <br>
+            <button class="btn btn-outline" onclick="loadUsers()" style="margin-top: 10px;">
+              Thử lại
+            </button>
+          </td>
+        </tr>
+      `;
+    }
+
+    // Xử lý menu active
+    const menuItems = document.querySelectorAll('.sidebar-menu li');
+    menuItems.forEach(item => {
+      item.addEventListener('click', function() {
+        menuItems.forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+    // Hiển thị modal thêm user
+    function showAddUserModal() {
+        document.getElementById('addUserModal').style.display = 'block';
+    }
+
+    // Đóng modal
+    function closeModal() {
+        document.getElementById('addUserModal').style.display = 'none';
+        document.getElementById('addUserForm').reset();
+    }
+
+    function closeEditModal() {
+        document.getElementById('editUserModal').style.display = 'none';
+    }
+
+    // Xử lý thêm user - SỬA ĐOẠN NÀY
+    document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const userData = {
+            FullName: document.getElementById('fullName').value,
+            Email: document.getElementById('email').value,
+            Phone: document.getElementById('phone').value,
+            Address: document.getElementById('address').value,
+            Role: document.getElementById('role').value
+        };
+        
+        try {
+            console.log("🔄 Đang gửi request thêm user...", userData);
+            
+            const response = await fetch('/customer', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userData)
+            });
+            
+            console.log("📊 Response status:", response.status);
+            
+            // KIỂM TRA RESPONSE TRƯỚC KHI PARSE JSON
+            const responseText = await response.text();
+            console.log("📄 Response text:", responseText);
+            
+            let result;
+            try {
+            result = JSON.parse(responseText);
+            } catch (parseError) {
+            console.error("❌ Không parse được JSON:", parseError);
+            throw new Error(`Server trả về HTML thay vì JSON. Status: ${response.status}`);
+            }
+            
+            if (response.ok) {
+            alert('✅ Thêm người dùng thành công!');
+            closeModal();
+            
+            // QUAN TRỌNG: RELOAD LẠI TOÀN BỘ DỮ LIỆU
+            await loadUsers(); // THÊM AWAIT Ở ĐÂY
+            
+            } else {
+            alert('❌ Lỗi: ' + (result.message || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('💥 Lỗi khi thêm user:', error);
+            alert('💥 Lỗi khi thêm người dùng: ' + error.message);
+        }
+    });
+
+    // Sửa user - Hiển thị modal
+    async function editUser(userId) {
+    console.log("✏️ EDIT USER CALLED:", userId);
+    
+    try {
+        const user = allUsers.find(u => u.CustomerID === userId);
+        if (!user) {
+            alert('Không tìm thấy người dùng!');
+            return;
+        }
+        
+        console.log("👤 User data for edit:", user);
+        
+        // Điền thông tin vào form
+        document.getElementById('editUserId').value = user.CustomerID;
+        document.getElementById('editFullName').value = user.FullName || '';
+        document.getElementById('editEmail').value = user.Email || '';
+        document.getElementById('editPhone').value = user.Phone || '';
+        document.getElementById('editAddress').value = user.Address || '';
+        document.getElementById('editRole').value = user.Role || 'customer';
+        
+        document.getElementById('editUserModal').style.display = 'block';
+        
+    } catch (error) {
+        console.error('Lỗi khi chuẩn bị sửa user:', error);
+        alert('Lỗi khi mở form sửa!');
+    }
+}
+
+    // Xử lý cập nhật user
+    // Xử lý cập nhật user - SỬA HÀM NÀY
+document.getElementById('editUserForm').addEventListener('submit', async function(e) {
+  e.preventDefault(); // QUAN TRỌNG: ngăn reload trang
+  
+  const userId = document.getElementById('editUserId').value;
+  const userData = {
+    FullName: document.getElementById('editFullName').value,
+    Email: document.getElementById('editEmail').value,
+    Phone: document.getElementById('editPhone').value,
+    Address: document.getElementById('editAddress').value,
+    Role: document.getElementById('editRole').value,
+  };
+  
+  console.log("🔄 Đang cập nhật user:", userId, userData);
+  
+  try {
+    const response = await fetch(`/customer/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData)
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      alert('✅ Cập nhật người dùng thành công!');
+      closeEditModal();
+      await loadUsers(); // Reload danh sách (không reload trang)
+    } else {
+      alert('❌ Lỗi: ' + result.message);
+    }
+  } catch (error) {
+    console.error('Lỗi khi cập nhật user:', error);
+    alert('💥 Lỗi khi cập nhật người dùng!');
+  }
+});
+
+    // Xóa user
+    async function deleteUser(userId) {
+        if (!confirm('Bạn có chắc muốn xóa người dùng này? Hành động này không thể hoàn tác!')) {
+        return;
+    }
+    
+        try {
+        const response = await fetch(`/customer/${userId}`, {
+        method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+        alert('Xóa người dùng thành công!');
+        loadUsers(); // Reload danh sách
+        } else {
+        alert('Lỗi: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Lỗi khi xóa user:', error);
+        alert('Lỗi khi xóa người dùng!');
+    }
+    }
+
+    // Đóng modal khi click outside
+    window.onclick = function(event) {
+        const addModal = document.getElementById('addUserModal');
+        const editModal = document.getElementById('editUserModal');
+        
+        if (event.target === addModal) {
+            closeModal();
+        }
+        if (event.target === editModal) {
+            closeEditModal();
+        }
+    }
+    // THÊM HÀM DEBUG VÀO user.html
+function debugUserData() {
+    console.log("=== 🐛 DEBUG USER DATA ===");
+    allUsers.forEach((user, index) => {
+        console.log(`User ${index}:`, {
+            ID: user.CustomerID,
+            Name: user.FullName,
+            Role: user.Role,
+            AccountStatus: user.AccountStatus,
+            StatusText: user.AccountStatus === 1 ? 'Đang hoạt động' : 'Ngừng hoạt động'
+        });
+    });
+}
+
+// Gọi debug sau khi load users
+async function loadUsers() {
+    try {
+        console.log("🔄 Đang tải danh sách người dùng...");
+        
+        const response = await fetch('/customer');
+        if (!response.ok) throw new Error('Lỗi khi tải người dùng');
+        
+        const customers = await response.json();
+        console.log("👥 USERS DATA FROM API:", customers);
+        
+        allUsers = customers;
+        updateUsersStats(customers);
+        displayUsers(customers);
+        
+        // DEBUG: Hiển thị chi tiết dữ liệu
+        debugUserData();
+        
+    } catch (error) {
+        console.error('❌ Lỗi khi tải người dùng:', error);
+        showFallbackData();
+    }
+}
+  </script>
+</body>
+</html>
