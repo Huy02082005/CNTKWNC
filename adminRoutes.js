@@ -1,15 +1,42 @@
-// routes/adminRoutes.js
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
-const authenticateAdmin = require('../middlewares/auth');
-const requireSuperAdmin = require('../middlewares/requireSuperAdmin');
 
-// Áp dụng middleware xác thực và SUPER ADMIN cho TẤT CẢ routes
-router.use(authenticateAdmin);
-router.use(requireSuperAdmin);  // Thêm dòng này
+// Middleware kiểm tra cookies và Super Admin
+const checkAuthAndSuperAdmin = (req, res, next) => {
+  try {
+    const userDataCookie = req.cookies.user_data;
+    
+    if (!userDataCookie) {
+      return res.status(401).json({
+        success: false,
+        error: 'Chưa đăng nhập'
+      });
+    }
+    
+    const user = JSON.parse(userDataCookie);
+    
+    if (!user.isSuperAdmin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Chỉ Super Admin mới có quyền truy cập' 
+      });
+    }
+    
+    req.user = user;
+    next();
+    
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    res.status(401).json({ 
+      success: false,
+      error: 'Lỗi xác thực' 
+    });
+  }
+};
 
-// Routes cho quản lý tài khoản admin
+router.use(checkAuthAndSuperAdmin);
+
 router.get('/', adminController.getAllAdmins);
 router.get('/stats', adminController.getAdminStats);
 router.get('/search', adminController.searchAdmins);
