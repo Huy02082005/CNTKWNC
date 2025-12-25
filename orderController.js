@@ -1,8 +1,7 @@
 const sql = require("mssql");
-const config = require("../db");
+const config = require("../config/db");
 
 const orderController = {
-  // Lấy tất cả đơn hàng
   getAllOrders: async (req, res) => {
     try {
       const pool = await sql.connect(config);
@@ -19,13 +18,11 @@ const orderController = {
     }
   },
 
-  // Lấy chi tiết đơn hàng - SỬA HOÀN TOÀN QUERY NÀY
 getOrderDetail: async (req, res) => {
   try {
     const { id } = req.params;
     const pool = await sql.connect(config);
 
-    // Lấy thông tin đơn hàng
     const orderResult = await pool.request()
       .input('id', sql.Int, id)
       .query(`
@@ -39,7 +36,6 @@ getOrderDetail: async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
 
-    // Lấy chi tiết sản phẩm trong đơn hàng - QUAN TRỌNG: SỬA QUERY NÀY
     const detailResult = await pool.request()
       .input('id', sql.Int, id)
       .query(`
@@ -56,8 +52,6 @@ getOrderDetail: async (req, res) => {
         WHERE od.OrderID = @id
       `);
 
-    console.log("💰 DEBUG Order Details:", detailResult.recordset); // Thêm log để debug
-
     res.json({
       order: orderResult.recordset[0],
       orderDetails: detailResult.recordset
@@ -68,24 +62,17 @@ getOrderDetail: async (req, res) => {
   }
 },
 
-// Cập nhật trạng thái đơn hàng
 updateOrderStatus: async (req, res) => {
   try {
     const { id } = req.params;
     const { Status } = req.body;
 
-    console.log("🔄 UPDATE ORDER STATUS REQUEST:");
-    console.log("Order ID:", id);
-    console.log("New Status:", Status);
-
-    // Danh sách các status hợp lệ theo CHECK constraint trong database
     const validStatuses = ['pending', 'paid', 'shipping', 'completed', 'cancelled'];
     
     if (!Status) {
       return res.status(400).json({ message: "Thiếu trường Status" });
     }
 
-    // Kiểm tra status có hợp lệ không
     if (!validStatuses.includes(Status)) {
       return res.status(400).json({ 
         message: "Trạng thái không hợp lệ",
@@ -95,22 +82,15 @@ updateOrderStatus: async (req, res) => {
     }
 
     const pool = await sql.connect(config);
-    console.log("✅ Database connected");
 
-    // Kiểm tra xem đơn hàng có tồn tại không
     const checkResult = await pool.request()
       .input('id', sql.Int, parseInt(id))
       .query('SELECT OrderID, Status FROM [Order] WHERE OrderID = @id');
-
-    console.log("📋 Check order exists:", checkResult.recordset);
 
     if (checkResult.recordset.length === 0) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
 
-    console.log("📋 Current order status:", checkResult.recordset[0].Status);
-
-    // Cập nhật trạng thái
     const result = await pool.request()
       .input('id', sql.Int, parseInt(id))
       .input('Status', sql.NVarChar(50), Status)
@@ -119,8 +99,6 @@ updateOrderStatus: async (req, res) => {
         SET Status = @Status
         WHERE OrderID = @id
       `);
-
-    console.log("✅ Update successful, rows affected:", result.rowsAffected[0]);
 
     res.json({ 
       message: "Cập nhật trạng thái thành công",
@@ -140,17 +118,14 @@ updateOrderStatus: async (req, res) => {
   }
 },
 
-  // Lấy thống kê đơn hàng - THÊM FUNCTION NÀY
   getOrderStats: async (req, res) => {
     try {
       const pool = await sql.connect(config);
-      
-      // Lấy tổng số đơn hàng
+
       const totalResult = await pool.request().query(`
         SELECT COUNT(*) as TotalOrders FROM [Order]
       `);
-      
-      // Lấy số đơn hàng theo trạng thái
+
       const statusResult = await pool.request().query(`
         SELECT 
           COUNT(CASE WHEN Status IN ('pending', 'processing') THEN 1 END) as PendingOrders,
@@ -158,8 +133,7 @@ updateOrderStatus: async (req, res) => {
           COUNT(CASE WHEN Status IN ('completed', 'delivered') THEN 1 END) as CompletedOrders
         FROM [Order]
       `);
-      
-      // Lấy tổng doanh thu từ các đơn hàng đã hoàn thành
+
       const revenueResult = await pool.request().query(`
         SELECT ISNULL(SUM(TotalPrice), 0) as TotalRevenue 
         FROM [Order] 
