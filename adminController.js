@@ -1,16 +1,12 @@
 const sql = require('mssql');
 
-// Lấy danh sách tất cả admin accounts
 const getAllAdmins = async (req, res) => {
     try {
-        console.log('🔄 Đang tải danh sách admin...');
-        
-        // Sử dụng connection pool từ app.locals
         const pool = req.app.locals.db;
         
         if (!pool) {
-            console.error('❌ Database pool không tồn tại');
             return res.status(500).json({ 
+                success: false,
                 error: 'Database connection không khả dụng'
             });
         }
@@ -30,16 +26,18 @@ const getAllAdmins = async (req, res) => {
                 FROM Account 
                 ORDER BY CreateDate DESC
             `);
-        
-        console.log(`✅ Đã tải ${result.recordset.length} admin`);
-        res.json(result.recordset);
+               
+        res.json({
+            success: true,
+            data: result.recordset
+        });
         
     } catch (error) {
         console.error('❌ Lỗi khi tải danh sách admin:', error);
         res.status(500).json({ 
+            success: false,
             error: 'Lỗi khi tải danh sách admin',
-            details: error.message,
-            stack: error.stack
+            details: error.message
         });
     }
 };
@@ -47,13 +45,11 @@ const getAllAdmins = async (req, res) => {
 // Lấy thống kê admin
 const getAdminStats = async (req, res) => {
     try {
-        console.log('🔄 Đang tải thống kê admin...');
-        
         const pool = req.app.locals.db;
         
         if (!pool) {
-            console.error('❌ Database pool không tồn tại');
             return res.status(500).json({ 
+                success: false,
                 error: 'Database connection không khả dụng'
             });
         }
@@ -68,16 +64,18 @@ const getAdminStats = async (req, res) => {
             `);
         
         const stats = result.recordset[0];
-        console.log('✅ Thống kê admin:', stats);
         
-        res.json(stats);
+        res.json({
+            success: true,
+            data: stats
+        });
         
     } catch (error) {
         console.error('❌ Lỗi khi tải thống kê admin:', error);
         res.status(500).json({ 
+            success: false,
             error: 'Lỗi khi tải thống kê admin',
-            details: error.message,
-            stack: error.stack
+            details: error.message
         });
     }
 };
@@ -106,13 +104,20 @@ const getAdminById = async (req, res) => {
             `);
         
         if (result.recordset.length === 0) {
-            return res.status(404).json({ error: 'Không tìm thấy admin' });
+            return res.status(404).json({ 
+                success: false,
+                error: 'Không tìm thấy admin' 
+            });
         }
         
-        res.json(result.recordset[0]);
+        res.json({
+            success: true,
+            data: result.recordset[0]
+        });
     } catch (error) {
         console.error('Error fetching admin by ID:', error);
         res.status(500).json({ 
+            success: false,
             error: 'Lỗi khi tải thông tin admin',
             details: error.message 
         });
@@ -126,11 +131,17 @@ const createAdmin = async (req, res) => {
         
         // Validate dữ liệu
         if (!Username || !Password) {
-            return res.status(400).json({ error: 'Tên đăng nhập và mật khẩu là bắt buộc' });
+            return res.status(400).json({ 
+                success: false,
+                error: 'Tên đăng nhập và mật khẩu là bắt buộc' 
+            });
         }
         
         if (Password.length < 6) {
-            return res.status(400).json({ error: 'Mật khẩu phải có ít nhất 6 ký tự' });
+            return res.status(400).json({ 
+                success: false,
+                error: 'Mật khẩu phải có ít nhất 6 ký tự' 
+            });
         }
         
         const pool = req.app.locals.db;
@@ -141,7 +152,10 @@ const createAdmin = async (req, res) => {
             .query('SELECT AccountID FROM Account WHERE Username = @Username');
         
         if (checkResult.recordset.length > 0) {
-            return res.status(400).json({ error: 'Tên đăng nhập đã tồn tại' });
+            return res.status(400).json({ 
+                success: false,
+                error: 'Tên đăng nhập đã tồn tại' 
+            });
         }
         
         // Tạo admin mới
@@ -170,20 +184,22 @@ const createAdmin = async (req, res) => {
         const newAdmin = insertResult.recordset[0];
         
         res.status(201).json({
+            success: true,
             message: 'Tạo admin thành công',
-            admin: newAdmin
+            data: newAdmin
         });
         
     } catch (error) {
         console.error('Error creating admin:', error);
         res.status(500).json({ 
+            success: false,
             error: 'Lỗi khi tạo admin',
             details: error.message 
         });
     }
 };
 
-// Các hàm khác giữ nguyên...
+// Cập nhật admin
 const updateAdmin = async (req, res) => {
     try {
         const { id } = req.params;
@@ -197,7 +213,10 @@ const updateAdmin = async (req, res) => {
             .query('SELECT AccountID FROM Account WHERE AccountID = @AccountID');
         
         if (checkResult.recordset.length === 0) {
-            return res.status(404).json({ error: 'Không tìm thấy admin' });
+            return res.status(404).json({ 
+                success: false,
+                error: 'Không tìm thấy admin' 
+            });
         }
         
         let updateQuery = `
@@ -219,7 +238,10 @@ const updateAdmin = async (req, res) => {
         
         if (Password) {
             if (Password.length < 6) {
-                return res.status(400).json({ error: 'Mật khẩu phải có ít nhất 6 ký tự' });
+                return res.status(400).json({ 
+                    success: false,
+                    error: 'Mật khẩu phải có ít nhất 6 ký tự' 
+                });
             }
             
             updateQuery += ', Password = @Password';
@@ -248,19 +270,22 @@ const updateAdmin = async (req, res) => {
             `);
         
         res.json({
+            success: true,
             message: 'Cập nhật admin thành công',
-            admin: updatedResult.recordset[0]
+            data: updatedResult.recordset[0]
         });
         
     } catch (error) {
         console.error('Error updating admin:', error);
         res.status(500).json({ 
+            success: false,
             error: 'Lỗi khi cập nhật admin',
             details: error.message 
         });
     }
 };
 
+// Xóa admin
 const deleteAdmin = async (req, res) => {
     try {
         const { id } = req.params;
@@ -272,19 +297,35 @@ const deleteAdmin = async (req, res) => {
             .query('SELECT AccountID, Username FROM Account WHERE AccountID = @AccountID');
         
         if (checkResult.recordset.length === 0) {
-            return res.status(404).json({ error: 'Không tìm thấy admin' });
+            return res.status(404).json({ 
+                success: false,
+                error: 'Không tìm thấy admin' 
+            });
         }
         
         const superAdminCheck = await pool.request()
             .query('SELECT COUNT(*) as SuperAdminCount FROM Account WHERE IsSuperAdmin = 1');
         
         const adminToDelete = checkResult.recordset[0];
-        const isSuperAdmin = await pool.request()
+        
+        const isSuperAdminResult = await pool.request()
             .input('AccountID', sql.Int, id)
             .query('SELECT IsSuperAdmin FROM Account WHERE AccountID = @AccountID');
         
-        if (isSuperAdmin.recordset[0].IsSuperAdmin && superAdminCheck.recordset[0].SuperAdminCount <= 1) {
-            return res.status(400).json({ error: 'Không thể xóa super admin cuối cùng' });
+        const isSuperAdmin = isSuperAdminResult.recordset[0].IsSuperAdmin;
+        
+        if (isSuperAdmin && superAdminCheck.recordset[0].SuperAdminCount <= 1) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Không thể xóa super admin cuối cùng' 
+            });
+        }
+        
+        if (parseInt(id) === req.user.id) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Không thể xóa tài khoản của chính mình' 
+            });
         }
         
         await pool.request()
@@ -292,13 +333,15 @@ const deleteAdmin = async (req, res) => {
             .query('DELETE FROM Account WHERE AccountID = @AccountID');
         
         res.json({
+            success: true,
             message: 'Xóa admin thành công',
-            deletedAdmin: adminToDelete
+            data: adminToDelete
         });
         
     } catch (error) {
         console.error('Error deleting admin:', error);
         res.status(500).json({ 
+            success: false,
             error: 'Lỗi khi xóa admin',
             details: error.message 
         });
@@ -310,7 +353,10 @@ const searchAdmins = async (req, res) => {
         const { q } = req.query;
         
         if (!q) {
-            return res.status(400).json({ error: 'Thiếu từ khóa tìm kiếm' });
+            return res.status(400).json({ 
+                success: false,
+                error: 'Thiếu từ khóa tìm kiếm' 
+            });
         }
         
         const pool = req.app.locals.db;
@@ -335,10 +381,14 @@ const searchAdmins = async (req, res) => {
                 ORDER BY CreateDate DESC
             `);
         
-        res.json(result.recordset);
+        res.json({
+            success: true,
+            data: result.recordset
+        });
     } catch (error) {
         console.error('Error searching admins:', error);
         res.status(500).json({ 
+            success: false,
             error: 'Lỗi khi tìm kiếm admin',
             details: error.message 
         });
