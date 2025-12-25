@@ -1,6 +1,6 @@
 // controllers/dashboardController.js - GIỮ NGUYÊN BẢN GỐC
 const sql = require("mssql");
-const config = require("../db");
+const config = require("../config/db");
 
 const dashboardController = {
   // Lấy thống kê tổng quan
