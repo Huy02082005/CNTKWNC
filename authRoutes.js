@@ -2,76 +2,118 @@ const express = require('express');
 const sql = require('mssql');
 const router = express.Router();
 
-// IMPORT dbConfig từ db.js
-const { dbConfig } = require('../db'); // hoặc '../db' tùy theo cấu trúc thư mục
-
-// Login API
 router.post('/login', async (req, res) => {
-  try {
-    console.log("📍 API /auth/login được gọi");
-    console.log("📝 Body:", req.body);
-    
+  try {    
     const { username, password } = req.body;
 
-    // Kết nối database
-    const pool = await sql.connect(dbConfig);
-    console.log("✅ Database connected");
+    const pool = req.app.locals.db;
     
-    // Query database
-    const result = await pool.request()
-      .input('username', sql.VarChar, username)
-      .query('SELECT Username, Password, Role FROM Account WHERE Username = @username');
+    if (!pool) {
+      return res.status(500).json({ message: "Database chưa kết nối" });
+    }
 
-    console.log("📊 Database result:", result.recordset);
+    const result = await pool.request()
+      .input('username', sql.NVarChar(50), username)
+      .query('SELECT AccountID, Username, Password, IsSuperAdmin, Status FROM Account WHERE Username = @username');
 
     if (result.recordset.length === 0) {
-      console.log("❌ User không tồn tại");
       return res.status(401).json({ message: "Sai tài khoản hoặc mật khẩu" });
     }
 
     const user = result.recordset[0];
     
-    // So sánh password plain text
     if (password !== user.Password) {
-      console.log("❌ Password sai");
       return res.status(401).json({ message: "Sai tài khoản hoặc mật khẩu" });
     }
+    
+    if (!user.Status) {
+      return res.status(403).json({ message: "Tài khoản đã bị khóa" });
+    }
 
-    console.log("✅ Login thành công:", user.Username, user.Role);
+    res.cookie('user_data', JSON.stringify({
+      id: user.AccountID,
+      username: user.Username,
+      isSuperAdmin: Boolean(user.IsSuperAdmin)
+    }), {
+      maxAge: 24 * 60 * 60 * 1000,
+      httpOnly: false,
+      sameSite: 'lax'
+    });
     
     res.json({ 
+      success: true,
       message: "Đăng nhập thành công",
-      role: user.Role,
-      username: user.Username
+      user: {
+        id: user.AccountID,
+        username: user.Username,
+        isSuperAdmin: Boolean(user.IsSuperAdmin)
+      }
     });
 
   } catch (error) {
     console.error('❌ Lỗi đăng nhập:', error);
-    res.status(500).json({ message: "Lỗi server: " + error.message });
+    res.status(500).json({ 
+      success: false,
+      message: "Lỗi server: " + error.message 
+    });
   }
 });
 
-// Check email API (cho quên mật khẩu)
+router.get('/check', (req, res) => {
+  try {
+    const userDataCookie = req.cookies.user_data;
+    
+    if (!userDataCookie) {
+      return res.json({ 
+        authenticated: false 
+      });
+    }
+    
+    const user = JSON.parse(userDataCookie);
+    
+    res.json({
+      authenticated: true,
+      user: user
+    });
+    
+  } catch (error) {
+    console.error('Check auth error:', error);
+    res.json({ 
+      authenticated: false 
+    });
+  }
+});
+
+router.post('/logout', (req, res) => {
+  // Xóa cookies
+  res.clearCookie('user_data');
+  res.json({ 
+    success: true, 
+    message: "Đã đăng xuất" 
+  });
+});
+
 router.post('/check-email', async (req, res) => {
   try {
     const { email } = req.body;
     console.log("📧 Check email:", email);
 
-    const pool = await sql.connect(dbConfig);
+    const pool = req.app.locals.db;
     
-    // Kiểm tra email trong bảng Account
+    if (!pool) {
+      return res.status(500).json({ error: 'Database chưa kết nối' });
+    }
+    
     const result = await pool.request()
       .input('email', sql.VarChar, email)
-      .query('SELECT Username, Role FROM Account WHERE Email = @email');
+      .query('SELECT Username, IsSuperAdmin FROM Account WHERE Email = @email');
 
     console.log("📊 Email check result:", result.recordset);
 
     const exists = result.recordset.length > 0;
-    const userType = exists ? result.recordset[0].Role : null;
     
     res.json({ 
       exists: exists,
-      type: userType,
       message: exists ? 'Email tồn tại' : 'Email không tồn tại'
     });
 
@@ -81,21 +123,20 @@ router.post('/check-email', async (req, res) => {
   }
 });
 
-// Reset password API
 router.post('/reset-password', async (req, res) => {
   try {
     const { email, newPassword } = req.body;
-    console.log("🔄 Reset password for:", email);
+ 
+    const pool = req.app.locals.db;
     
-    const pool = await sql.connect(dbConfig);
-    
-    // Cập nhật mật khẩu dựa trên email
+    if (!pool) {
+      return res.status(500).json({ error: 'Database chưa kết nối' });
+    }
+
     const result = await pool.request()
       .input('email', sql.VarChar, email)
       .input('newPassword', sql.VarChar, newPassword)
       .query('UPDATE Account SET Password = @newPassword WHERE Email = @email');
-    
-    console.log("📊 Reset result:", result.rowsAffected);
     
     if (result.rowsAffected[0] > 0) {
       res.json({ 
