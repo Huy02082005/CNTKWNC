@@ -6,9 +6,9 @@
   <title>Quản Lý Tài Khoản Admin - Admin Dashboard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
-  <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-header">
       <h2>Admin Dashboard</h2>
@@ -226,79 +226,139 @@
   </div>
 
   <script>
-    // Biến toàn cục
-    let currentPage = 1;
-    const itemsPerPage = 10;
-    let allAdmins = [];
-    let filteredAdmins = [];
-    let adminToDelete = null;
+let currentPage = 1;
+const itemsPerPage = 10;
+let allAdmins = [];
+let filteredAdmins = [];
+let adminToDelete = null;
 
-    // Kiểm tra đăng nhập và quyền admin
-    document.addEventListener('DOMContentLoaded', function() {
-      const logged = localStorage.getItem("logged");
-      const role = localStorage.getItem("role");
-      
-      if (logged !== "true" || role !== "admin") {
-        alert("Bạn không có quyền truy cập trang admin!");
-        window.location.href = "/login.html";
-        return;
-      }
-      
-      // Hiển thị tên admin
-      const username = localStorage.getItem("username");
-      if (username) {
-        document.getElementById('adminName').textContent = username;
-      }
-      
-      // Tải dữ liệu
-      loadAdmins();
-      loadAdminStats();
-      
-      // Xử lý menu active
-      setupMenuActive();
-    });
+// Kiểm tra đăng nhập và quyền admin - SỬA HOÀN TOÀN
+document.addEventListener('DOMContentLoaded', async function() {
+    await checkAuthAndPermission();
+});
 
-    // Hàm đăng xuất
-    function logout() {
-      localStorage.removeItem("logged");
-      localStorage.removeItem("role");
-      localStorage.removeItem("username");
-      window.location.href = "login.html";
-    }
-
-    // Xử lý menu active
-    function setupMenuActive() {
-      const menuItems = document.querySelectorAll('.sidebar-menu li');
-      menuItems.forEach(item => {
-        item.addEventListener('click', function() {
-          menuItems.forEach(i => i.classList.remove('active'));
-          this.classList.add('active');
+async function checkAuthAndPermission() {
+    try {
+        // 1. Kiểm tra auth bằng cookies
+        const authResponse = await fetch('/api/auth/check', {
+            credentials: 'include' // QUAN TRỌNG: gửi cookies
         });
-      });
+        
+        if (!authResponse.ok) {
+            window.location.href = "/login.html";
+            return;
+        }
+        
+        const authData = await authResponse.json();
+        console.log("🔍 Auth check:", authData);
+        
+        if (!authData.authenticated) {
+            alert("Vui lòng đăng nhập!");
+            window.location.href = "/login.html";
+            return;
+        }
+        
+        const user = authData.user;
+        
+        // 2. Kiểm tra Super Admin
+        if (!user.isSuperAdmin) {
+            alert("❌ CHỈ SUPER ADMIN MỚI ĐƯỢC TRUY CẬP TRANG NÀY!");
+            window.location.href = "/dashboard.html";
+            return;
+        }
+        
+        console.log("✅ Super Admin verified:", user.username);
+        
+        // 3. Hiển thị thông tin user
+        document.getElementById('adminName').textContent = user.username;
+        document.querySelector('.user-info p').textContent = "👑 Super Admin";
+        
+        // 4. Tải dữ liệu
+        await loadAdmins(user.id);
+        await loadAdminStats();
+        
+        // 5. Setup menu
+        setupMenuActive();
+        
+    } catch (error) {
+        console.error('❌ Lỗi kiểm tra auth:', error);
+        alert("Lỗi xác thực! Vui lòng đăng nhập lại.");
+        window.location.href = "/login.html";
     }
+}
 
-    // Hàm tải danh sách admin
-    async function loadAdmins() {
-      try {
-        const response = await fetch('/account');
-        if (!response.ok) throw new Error('Lỗi khi tải danh sách admin');
+// Hàm đăng xuất - SỬA
+async function logout() {
+    try {
+        await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include'
+        });
+        window.location.href = "/login.html";
+    } catch (error) {
+        console.error('Logout error:', error);
+        window.location.href = "/login.html";
+    }
+}
+
+// Xử lý menu active - GIỮ NGUYÊN
+function setupMenuActive() {
+    const menuItems = document.querySelectorAll('.sidebar-menu li');
+    menuItems.forEach(item => {
+        item.addEventListener('click', function() {
+            menuItems.forEach(i => i.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+}
+
+// Hàm tải danh sách admin - SỬA
+async function loadAdmins() {
+    try {
+        const response = await fetch('/api/admin', {
+            credentials: 'include' // Gửi cookies
+        });
+        
+        console.log("📊 Admin API status:", response.status);
+        
+        if (response.status === 403) {
+            alert("Bạn không có quyền truy cập!");
+            window.location.href = "/dashboard.html";
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error('Lỗi API: ' + response.status);
+        }
         
         allAdmins = await response.json();
-        console.log("👥 Admins nhận được:", allAdmins);
+        console.log("👥 Admins nhận được:", allAdmins.length);
         
         filteredAdmins = [...allAdmins];
         renderAdminsTable();
         
-      } catch (error) {
+    } catch (error) {
         console.error('❌ Lỗi khi tải danh sách admin:', error);
-        showFallbackData();
-      }
+        document.getElementById('adminsTableBody').innerHTML = `
+            <tr>
+                <td colspan="10" style="text-align: center; color: red;">
+                    Lỗi tải dữ liệu: ${error.message}<br>
+                    <button onclick="location.reload()" class="btn btn-outline">
+                        Thử lại
+                    </button>
+                </td>
+            </tr>
+        `;
     }
+}
 
-    // Hàm tải thống kê admin
-    async function loadAdminStats() {
-      try {
-        const response = await fetch('/account/stats');
+// Hàm tải thống kê admin - SỬA
+async function loadAdminStats() {
+    try {
+        const response = await fetch('/api/admin/stats', {
+            credentials: 'include' // Gửi cookies
+        });
+        
         if (!response.ok) throw new Error('Lỗi khi tải thống kê');
         
         const stats = await response.json();
@@ -306,198 +366,163 @@
         
         updateStatsUI(stats);
         
-      } catch (error) {
+    } catch (error) {
         console.error('❌ Lỗi khi tải thống kê:', error);
-        // Sử dụng dữ liệu mẫu nếu API lỗi
         showFallbackStats();
-      }
     }
+}
 
-    // Cập nhật UI với dữ liệu thống kê
-    function updateStatsUI(stats) {
-      document.getElementById('totalAdmins').textContent = stats.totalAdmins || '0';
-      document.getElementById('activeAdmins').textContent = stats.activeAdmins || '0';
-      document.getElementById('superAdmins').textContent = stats.superAdmins || '0';
-    }
+// Cập nhật UI với dữ liệu thống kê - GIỮ NGUYÊN
+function updateStatsUI(stats) {
+    document.getElementById('totalAdmins').textContent = stats.totalAdmins || '0';
+    document.getElementById('activeAdmins').textContent = stats.activeAdmins || '0';
+    document.getElementById('superAdmins').textContent = stats.superAdmins || '0';
+}
 
-    // Hiển thị dữ liệu mẫu khi API lỗi
-    function showFallbackStats() {
-      document.getElementById('totalAdmins').textContent = '5';
-      document.getElementById('activeAdmins').textContent = '4';
-      document.getElementById('superAdmins').textContent = '1';
-    }
+// Hiển thị dữ liệu mẫu khi API lỗi - GIỮ NGUYÊN
+function showFallbackStats() {
+    document.getElementById('totalAdmins').textContent = '0';
+    document.getElementById('activeAdmins').textContent = '0';
+    document.getElementById('superAdmins').textContent = '0';
+}
 
-    // Hiển thị dữ liệu mẫu trong bảng
-    function showFallbackData() {
-      const tbody = document.getElementById('adminsTableBody');
-      tbody.innerHTML = `
-        <tr>
-          <td>1</td>
-          <td>admin</td>
-          <td>Nguyễn Đức Huy</td>
-          <td>huynd@example.com</td>
-          <td>0987654321</td>
-          <td>01/10/2023</td>
-          <td>15/10/2023</td>
-          <td><span class="status warning">Super Admin</span></td>
-          <td><span class="status active">Hoạt động</span></td>
-          <td>
-            <button class="btn btn-outline" onclick="editAdmin(1)">Sửa</button>
-            <button class="btn btn-danger" onclick="confirmDelete(1)">Xóa</button>
-          </td>
-        </tr>
-        <tr>
-          <td>2</td>
-          <td>manager</td>
-          <td>Trần Thị Bích</td>
-          <td>bichtt@example.com</td>
-          <td>0912345678</td>
-          <td>05/10/2023</td>
-          <td>14/10/2023</td>
-          <td><span class="status">Admin</span></td>
-          <td><span class="status active">Hoạt động</span></td>
-          <td>
-            <button class="btn btn-outline" onclick="editAdmin(2)">Sửa</button>
-            <button class="btn btn-danger" onclick="confirmDelete(2)">Xóa</button>
-          </td>
-        </tr>
-      `;
-    }
-
-    // Render bảng admin với phân trang
-    function renderAdminsTable() {
-      const tbody = document.getElementById('adminsTableBody');
-      const startIndex = (currentPage - 1) * itemsPerPage;
-      const endIndex = startIndex + itemsPerPage;
-      const pageAdmins = filteredAdmins.slice(startIndex, endIndex);
-      
-      if (pageAdmins.length === 0) {
+// Render bảng admin với phân trang - GIỮ NGUYÊN
+function renderAdminsTable() {
+    const tbody = document.getElementById('adminsTableBody');
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageAdmins = filteredAdmins.slice(startIndex, endIndex);
+    
+    if (pageAdmins.length === 0) {
         tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">Không có dữ liệu</td></tr>';
         renderPagination();
         return;
-      }
-      
-      tbody.innerHTML = '';
-      
-      pageAdmins.forEach(admin => {
+    }
+    
+    tbody.innerHTML = '';
+    
+    pageAdmins.forEach(admin => {
         const row = document.createElement('tr');
         
         row.innerHTML = `
-          <td>${admin.AccountID}</td>
-          <td>${admin.Username}</td>
-          <td>${admin.FullName || 'Chưa cập nhật'}</td>
-          <td>${admin.Email || 'Chưa cập nhật'}</td>
-          <td>${admin.Phone || 'Chưa cập nhật'}</td>
-          <td>${formatDate(admin.CreateDate)}</td>
-          <td>${admin.LastLogin ? formatDate(admin.LastLogin) : 'Chưa đăng nhập'}</td>
-          <td><span class="status ${admin.IsSuperAdmin ? 'warning' : ''}">${admin.IsSuperAdmin ? 'Super Admin' : 'Admin'}</span></td>
-          <td><span class="status ${admin.Status ? 'active' : 'pending'}">${admin.Status ? 'Hoạt động' : 'Đã khóa'}</span></td>
-          <td>
-            <button class="btn btn-outline" onclick="editAdmin(${admin.AccountID})">Sửa</button>
-            <button class="btn btn-danger" onclick="confirmDelete(${admin.AccountID})">Xóa</button>
-          </td>
+            <td>${admin.AccountID}</td>
+            <td>${admin.Username}</td>
+            <td>${admin.FullName || 'Chưa cập nhật'}</td>
+            <td>${admin.Email || 'Chưa cập nhật'}</td>
+            <td>${admin.Phone || 'Chưa cập nhật'}</td>
+            <td>${formatDate(admin.CreateDate)}</td>
+            <td>${admin.LastLogin ? formatDate(admin.LastLogin) : 'Chưa đăng nhập'}</td>
+            <td><span class="status ${admin.IsSuperAdmin ? 'warning' : ''}">${admin.IsSuperAdmin ? 'Super Admin' : 'Admin'}</span></td>
+            <td><span class="status ${admin.Status ? 'active' : 'pending'}">${admin.Status ? 'Hoạt động' : 'Đã khóa'}</span></td>
+            <td>
+                <button class="btn btn-outline" onclick="editAdmin(${admin.AccountID})">Sửa</button>
+                <button class="btn btn-danger" onclick="confirmDelete(${admin.AccountID})">Xóa</button>
+            </td>
         `;
         
         tbody.appendChild(row);
-      });
-      
-      renderPagination();
-    }
+    });
+    
+    renderPagination();
+}
 
-    // Render phân trang
-    function renderPagination() {
-      const totalPages = Math.ceil(filteredAdmins.length / itemsPerPage);
-      const pagination = document.getElementById('pagination');
-      
-      if (totalPages <= 1) {
+// Render phân trang - GIỮ NGUYÊN
+function renderPagination() {
+    const totalPages = Math.ceil(filteredAdmins.length / itemsPerPage);
+    const pagination = document.getElementById('pagination');
+    
+    if (totalPages <= 1) {
         pagination.innerHTML = '';
         return;
-      }
-      
-      let paginationHTML = '';
-      
-      // Nút Previous
-      if (currentPage > 1) {
+    }
+    
+    let paginationHTML = '';
+    
+    // Nút Previous
+    if (currentPage > 1) {
         paginationHTML += `<button class="page-btn" onclick="changePage(${currentPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
-      }
-      
-      // Các trang
-      for (let i = 1; i <= totalPages; i++) {
+    }
+    
+    // Các trang
+    for (let i = 1; i <= totalPages; i++) {
         if (i === currentPage) {
-          paginationHTML += `<button class="page-btn active">${i}</button>`;
+            paginationHTML += `<button class="page-btn active">${i}</button>`;
         } else {
-          paginationHTML += `<button class="page-btn" onclick="changePage(${i})">${i}</button>`;
+            paginationHTML += `<button class="page-btn" onclick="changePage(${i})">${i}</button>`;
         }
-      }
-      
-      // Nút Next
-      if (currentPage < totalPages) {
+    }
+    
+    // Nút Next
+    if (currentPage < totalPages) {
         paginationHTML += `<button class="page-btn" onclick="changePage(${currentPage + 1})"><i class="fas fa-chevron-right"></i></button>`;
-      }
-      
-      pagination.innerHTML = paginationHTML;
     }
+    
+    pagination.innerHTML = paginationHTML;
+}
 
-    // Chuyển trang
-    function changePage(page) {
-      currentPage = page;
-      renderAdminsTable();
-    }
+// Chuyển trang - GIỮ NGUYÊN
+function changePage(page) {
+    currentPage = page;
+    renderAdminsTable();
+}
 
-    // Tìm kiếm admin
-    function searchAdmins() {
-      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-      
-      if (searchTerm.trim() === '') {
+// Tìm kiếm admin - GIỮ NGUYÊN
+function searchAdmins() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    
+    if (searchTerm.trim() === '') {
         filteredAdmins = [...allAdmins];
-      } else {
+    } else {
         filteredAdmins = allAdmins.filter(admin => 
-          (admin.Username && admin.Username.toLowerCase().includes(searchTerm)) ||
-          (admin.FullName && admin.FullName.toLowerCase().includes(searchTerm)) ||
-          (admin.Email && admin.Email.toLowerCase().includes(searchTerm))
+            (admin.Username && admin.Username.toLowerCase().includes(searchTerm)) ||
+            (admin.FullName && admin.FullName.toLowerCase().includes(searchTerm)) ||
+            (admin.Email && admin.Email.toLowerCase().includes(searchTerm))
         );
-      }
-      
-      currentPage = 1;
-      renderAdminsTable();
     }
+    
+    currentPage = 1;
+    renderAdminsTable();
+}
 
-    // Lọc admin theo trạng thái
-    function filterAdmins() {
-      const statusFilter = document.getElementById('statusFilter').value;
-      
-      if (statusFilter === 'all') {
+// Lọc admin theo trạng thái - GIỮ NGUYÊN
+function filterAdmins() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    
+    if (statusFilter === 'all') {
         filteredAdmins = [...allAdmins];
-      } else if (statusFilter === 'active') {
+    } else if (statusFilter === 'active') {
         filteredAdmins = allAdmins.filter(admin => admin.Status);
-      } else if (statusFilter === 'inactive') {
+    } else if (statusFilter === 'inactive') {
         filteredAdmins = allAdmins.filter(admin => !admin.Status);
-      }
-      
-      currentPage = 1;
-      renderAdminsTable();
     }
+    
+    currentPage = 1;
+    renderAdminsTable();
+}
 
-    // Làm mới danh sách
-    function refreshAdmins() {
-      loadAdmins();
-      loadAdminStats();
-    }
+// Làm mới danh sách - SỬA
+async function refreshAdmins() {
+    await loadAdmins();
+    await loadAdminStats();
+}
 
-    // Hiển thị modal thêm admin
-    function showAddAdminModal() {
-      document.getElementById('modalTitle').textContent = 'Thêm Admin Mới';
-      document.getElementById('adminForm').reset();
-      document.getElementById('adminId').value = '';
-      document.getElementById('password').required = true;
-      document.getElementById('confirmPassword').required = true;
-      document.getElementById('adminModal').style.display = 'block';
-    }
+// Hiển thị modal thêm admin - GIỮ NGUYÊN
+function showAddAdminModal() {
+    document.getElementById('modalTitle').textContent = 'Thêm Admin Mới';
+    document.getElementById('adminForm').reset();
+    document.getElementById('adminId').value = '';
+    document.getElementById('password').required = true;
+    document.getElementById('confirmPassword').required = true;
+    document.getElementById('adminModal').style.display = 'block';
+}
 
-    // Hiển thị modal sửa admin
-    async function editAdmin(accountId) {
-      try {
-        const response = await fetch(`/account/${accountId}`);
+// Hiển thị modal sửa admin - SỬA
+async function editAdmin(accountId) {
+    try {
+        const response = await fetch(`/api/admin/${accountId}`, {
+            credentials: 'include' // Gửi cookies
+        });
+        
         if (!response.ok) throw new Error('Lỗi khi tải thông tin admin');
         
         const admin = await response.json();
@@ -516,302 +541,140 @@
         
         document.getElementById('adminModal').style.display = 'block';
         
-      } catch (error) {
+    } catch (error) {
         console.error('❌ Lỗi khi tải thông tin admin:', error);
         alert('Không thể tải thông tin admin');
-      }
     }
+}
 
-    // Đóng modal admin
-    function closeAdminModal() {
-      document.getElementById('adminModal').style.display = 'none';
-      document.getElementById('username').disabled = false;
-    }
+// Đóng modal admin - GIỮ NGUYÊN
+function closeAdminModal() {
+    document.getElementById('adminModal').style.display = 'none';
+    document.getElementById('username').disabled = false;
+}
 
-    // Lưu admin (thêm/sửa)
-    async function saveAdmin(event) {
-      event.preventDefault();
-      
-      const adminId = document.getElementById('adminId').value;
-      const password = document.getElementById('password').value;
-      const confirmPassword = document.getElementById('confirmPassword').value;
-      
-      // Kiểm tra mật khẩu khi thêm mới
-      if (!adminId && password !== confirmPassword) {
+// Lưu admin (thêm/sửa) - SỬA
+async function saveAdmin(event) {
+    event.preventDefault();
+    
+    const adminId = document.getElementById('adminId').value;
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    // Kiểm tra mật khẩu khi thêm mới
+    if (!adminId && password !== confirmPassword) {
         alert('Mật khẩu xác nhận không khớp!');
         return;
-      }
-      
-      const formData = {
+    }
+    
+    const formData = {
         Username: document.getElementById('username').value,
         FullName: document.getElementById('fullName').value,
         Email: document.getElementById('email').value,
         Phone: document.getElementById('phone').value,
         IsSuperAdmin: document.getElementById('isSuperAdmin').value === 'true',
         Status: document.getElementById('status').value === 'true'
-      };
-      
-      // Chỉ thêm mật khẩu nếu có (khi thêm mới hoặc đổi mật khẩu)
-      if (password) {
+    };
+    
+    // Chỉ thêm mật khẩu nếu có (khi thêm mới hoặc đổi mật khẩu)
+    if (password) {
         formData.Password = password;
-      }
-      
-      try {
-        let response;
+    }
+    
+    try {
+        const url = adminId ? `/api/admin/${adminId}` : '/api/admin';
+        const method = adminId ? 'PUT' : 'POST';
         
-        if (adminId) {
-          // Cập nhật admin
-          response = await fetch(`/account/${adminId}`, {
-            method: 'PUT',
+        const response = await fetch(url, {
+            method: method,
             headers: {
-              'Content-Type': 'application/json'
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify(formData)
-          });
-        } else {
-          // Thêm admin mới
-          response = await fetch('/account', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-          });
+            body: JSON.stringify(formData),
+            credentials: 'include' // Gửi cookies
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Lỗi khi lưu admin');
         }
-        
-        if (!response.ok) throw new Error('Lỗi khi lưu admin');
         
         const result = await response.json();
         console.log('✅ Admin đã được lưu:', result);
         
         closeAdminModal();
-        refreshAdmins();
+        await refreshAdmins();
         alert(adminId ? 'Cập nhật admin thành công!' : 'Thêm admin mới thành công!');
         
-      } catch (error) {
+    } catch (error) {
         console.error('❌ Lỗi khi lưu admin:', error);
         alert('Lỗi khi lưu admin: ' + error.message);
-      }
     }
+}
 
-    // Xác nhận xóa admin
-    function confirmDelete(accountId) {
-      adminToDelete = accountId;
-      document.getElementById('confirmModal').style.display = 'block';
-    }
+// Xác nhận xóa admin - GIỮ NGUYÊN
+function confirmDelete(accountId) {
+    adminToDelete = accountId;
+    document.getElementById('confirmModal').style.display = 'block';
+}
 
-    // Đóng modal xác nhận
-    function closeConfirmModal() {
-      document.getElementById('confirmModal').style.display = 'none';
-      adminToDelete = null;
-    }
+// Đóng modal xác nhận - GIỮ NGUYÊN
+function closeConfirmModal() {
+    document.getElementById('confirmModal').style.display = 'none';
+    adminToDelete = null;
+}
 
-    // Xóa admin
-    async function deleteAdmin() {
-      if (!adminToDelete) return;
-      
-      try {
-        const response = await fetch(`/account/${adminToDelete}`, {
-          method: 'DELETE'
+// Xóa admin - SỬA
+async function deleteAdmin() {
+    if (!adminToDelete) return;
+    
+    try {
+        const response = await fetch(`/api/admin/${adminToDelete}`, {
+            method: 'DELETE',
+            credentials: 'include' // Gửi cookies
         });
         
-        if (!response.ok) throw new Error('Lỗi khi xóa admin');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Lỗi khi xóa admin');
+        }
         
         console.log('✅ Admin đã được xóa');
         
         closeConfirmModal();
-        refreshAdmins();
+        await refreshAdmins();
         alert('Xóa admin thành công!');
         
-      } catch (error) {
+    } catch (error) {
         console.error('❌ Lỗi khi xóa admin:', error);
         alert('Lỗi khi xóa admin: ' + error.message);
-      }
     }
+}
 
-    // Gán sự kiện cho nút xác nhận xóa
-    document.getElementById('confirmDeleteBtn').addEventListener('click', deleteAdmin);
+// Gán sự kiện cho nút xác nhận xóa - GIỮ NGUYÊN
+document.getElementById('confirmDeleteBtn').addEventListener('click', deleteAdmin);
 
-    // Hàm phụ trợ
-    function formatDate(dateString) {
-      if (!dateString) return 'Chưa có ngày';
-      const date = new Date(dateString);
-      return date.toLocaleDateString('vi-VN');
-    }
+// Hàm phụ trợ - GIỮ NGUYÊN
+function formatDate(dateString) {
+    if (!dateString) return 'Chưa có ngày';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN');
+}
 
-    // Đóng modal khi click bên ngoài
-    window.onclick = function(event) {
-      const adminModal = document.getElementById('adminModal');
-      const confirmModal = document.getElementById('confirmModal');
-      
-      if (event.target === adminModal) {
+// Đóng modal khi click bên ngoài - GIỮ NGUYÊN
+window.onclick = function(event) {
+    const adminModal = document.getElementById('adminModal');
+    const confirmModal = document.getElementById('confirmModal');
+    
+    if (event.target === adminModal) {
         closeAdminModal();
-      }
-      
-      if (event.target === confirmModal) {
+    }
+    
+    if (event.target === confirmModal) {
         closeConfirmModal();
-      }
     }
-  </script>
+}
+</script>
 
-  <style>
-    /* CSS bổ sung cho trang quản lý admin */
-    .action-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding: 15px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .search-box {
-      display: flex;
-      gap: 10px;
-    }
-    
-    .search-box input {
-      padding: 8px 12px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      min-width: 250px;
-    }
-    
-    .table-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-    
-    .table-actions select {
-      padding: 8px 12px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-    }
-    
-    .pagination {
-      display: flex;
-      justify-content: center;
-      margin-top: 20px;
-      gap: 5px;
-    }
-    
-    .page-btn {
-      padding: 8px 12px;
-      border: 1px solid #ddd;
-      background: white;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    
-    .page-btn.active {
-      background: #007bff;
-      color: white;
-      border-color: #007bff;
-    }
-    
-    .page-btn:hover:not(.active) {
-      background: #f8f9fa;
-    }
-    
-    .status.warning {
-      background: #ffc107;
-      color: #212529;
-    }
-    
-    /* Modal styles */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
-    }
-    
-    .modal-content {
-      background-color: white;
-      margin: 5% auto;
-      padding: 0;
-      border-radius: 8px;
-      width: 90%;
-      max-width: 600px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    
-    .confirm-modal {
-      max-width: 400px;
-    }
-    
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px;
-      border-bottom: 1px solid #eee;
-    }
-    
-    .modal-header h2 {
-      margin: 0;
-      font-size: 1.5rem;
-    }
-    
-    .close {
-      font-size: 28px;
-      font-weight: bold;
-      cursor: pointer;
-      color: #aaa;
-    }
-    
-    .close:hover {
-      color: #000;
-    }
-    
-    .modal-body {
-      padding: 20px;
-    }
-    
-    .modal-footer {
-      padding: 20px;
-      border-top: 1px solid #eee;
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-    }
-    
-    .form-group {
-      margin-bottom: 15px;
-    }
-    
-    .form-group label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: 500;
-    }
-    
-    .form-group input,
-    .form-group select {
-      width: 100%;
-      padding: 8px 12px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      box-sizing: border-box;
-    }
-    
-    .form-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 20px;
-    }
-    
-    .text-danger {
-      color: #dc3545;
-    }
-  </style>
 </body>
 </html>
