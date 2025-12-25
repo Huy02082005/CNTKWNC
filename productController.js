@@ -1,28 +1,46 @@
 const sql = require("mssql");
-const config = require("../db");
+const config = require("../config/db");
 
 const productController = {
-  // Lấy tất cả sản phẩm
-  getAllProducts: async (req, res) => {
-    try {
-      const pool = await sql.connect(config);
-      const result = await pool.request().query(`
-        SELECT p.*, c.CategoryName, b.BrandName, ct.ClubName, ps.SizeName
-        FROM Product p
-        LEFT JOIN Category c ON p.CategoryID = c.CategoryID
-        LEFT JOIN Brand b ON p.BrandID = b.BrandID
-        LEFT JOIN ClubTeam ct ON p.ClubID = ct.ClubID
-        LEFT JOIN ProductSize ps ON p.SizeID = ps.SizeID
-        ORDER BY p.ProductID DESC
-      `);
+    getAllProducts: async (req, res) => {
+     try {
+      let pool = req.app.locals.db;
+      
+      if (!pool || !pool.connected) {
+        pool = await sql.connect(config);
+        req.app.locals.db = pool;
+      }
+
+    const result = await pool.request().query(`
+      SELECT p.*, c.CategoryName, b.BrandName, l.LeagueName, ps.SizeName
+      FROM Product p
+      LEFT JOIN Category c ON p.CategoryID = c.CategoryID
+      LEFT JOIN Brand b ON p.BrandID = b.BrandID
+      LEFT JOIN League l ON p.LeagueID = l.LeagueID
+      LEFT JOIN ProductSize ps ON p.SizeID = ps.SizeID
+      ORDER BY p.ProductID DESC
+    `);
+    
       res.json(result.recordset);
+      
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Lỗi server" });
+      console.error('❌ LỖI CHI TIẾT trong getAllProducts:');
+      console.error('❌ Error message:', err.message);
+      console.error('❌ Error code:', err.code);
+      console.error('❌ Error number:', err.number);
+      console.error('❌ Error state:', err.state);
+      console.error('❌ Error stack:', err.stack);
+
+      res.status(500).json({ 
+        success: false,
+        message: "Lỗi server khi lấy sản phẩm",
+        error: err.message,
+        code: err.code,
+        details: "Kiểm tra console server để biết thêm chi tiết"
+      });
     }
   },
 
-  // Lấy sản phẩm theo ID
   getProductById: async (req, res) => {
     try {
       const { id } = req.params;
@@ -34,7 +52,7 @@ const productController = {
           FROM Product p
           LEFT JOIN Category c ON p.CategoryID = c.CategoryID
           LEFT JOIN Brand b ON p.BrandID = b.BrandID
-          LEFT JOIN ClubTeam ct ON p.ClubID = ct.ClubID
+          LEFT JOIN League l ON p.LeagueID = l.LeagueID
           LEFT JOIN ProductSize ps ON p.SizeID = ps.SizeID
           WHERE p.ProductID = @id
         `);
@@ -50,13 +68,12 @@ const productController = {
     }
   },
 
-  // Thêm sản phẩm mới
   createProduct: async (req, res) => {
     try {
       const {
         ProductName, Description, CategoryID, BrandID, ImageURL,
         ImportPrice, SellingPrice, Discount, StockQuantity, Unit,
-        ClubID, SizeID, Season, IsHomeKit, PlayerName
+        LeagueID, SizeID, Season, IsHomeKit, PlayerName
       } = req.body;
 
       const pool = await sql.connect(config);
@@ -71,18 +88,18 @@ const productController = {
         .input('Discount', sql.Decimal(5,2), Discount || 0)
         .input('StockQuantity', sql.Int, StockQuantity || 0)
         .input('Unit', sql.NVarChar, Unit)
-        .input('ClubID', sql.Int, ClubID)
+        .input('LeagueID', sql.Int, LeagueID || 1)
         .input('SizeID', sql.Int, SizeID)
         .input('Season', sql.NVarChar, Season)
         .input('IsHomeKit', sql.Bit, IsHomeKit || 1)
         .input('PlayerName', sql.NVarChar, PlayerName)
         .query(`
           INSERT INTO Product (ProductName, Description, CategoryID, BrandID, ImageURL, 
-          ImportPrice, SellingPrice, Discount, StockQuantity, Unit, ClubID, SizeID, 
+          ImportPrice, SellingPrice, Discount, StockQuantity, Unit, LeagueID, SizeID, 
           Season, IsHomeKit, PlayerName, CreateDate, UpdateDate)
           OUTPUT INSERTED.*
           VALUES (@ProductName, @Description, @CategoryID, @BrandID, @ImageURL,
-          @ImportPrice, @SellingPrice, @Discount, @StockQuantity, @Unit, @ClubID,
+          @ImportPrice, @SellingPrice, @Discount, @StockQuantity, @Unit, @LeagueID,
           @SizeID, @Season, @IsHomeKit, @PlayerName, GETDATE(), GETDATE())
         `);
 
@@ -96,14 +113,13 @@ const productController = {
     }
   },
 
-  // Cập nhật sản phẩm
   updateProduct: async (req, res) => {
     try {
       const { id } = req.params;
       const {
         ProductName, Description, CategoryID, BrandID, ImageURL,
         ImportPrice, SellingPrice, Discount, StockQuantity, Unit,
-        ClubID, SizeID, Season, IsHomeKit, PlayerName, Status
+        LeagueID, SizeID, Season, IsHomeKit, PlayerName, Status
       } = req.body;
 
       const pool = await sql.connect(config);
@@ -119,7 +135,7 @@ const productController = {
         .input('Discount', sql.Decimal(5,2), Discount)
         .input('StockQuantity', sql.Int, StockQuantity)
         .input('Unit', sql.NVarChar, Unit)
-        .input('ClubID', sql.Int, ClubID)
+        .input('LeagueID', sql.Int, LeagueID || 1)
         .input('SizeID', sql.Int, SizeID)
         .input('Season', sql.NVarChar, Season)
         .input('IsHomeKit', sql.Bit, IsHomeKit)
@@ -137,7 +153,7 @@ const productController = {
             Discount = @Discount,
             StockQuantity = @StockQuantity,
             Unit = @Unit,
-            ClubID = @ClubID,
+            LeagueID = @LeagueID,
             SizeID = @SizeID,
             Season = @Season,
             IsHomeKit = @IsHomeKit,
@@ -158,7 +174,6 @@ const productController = {
     }
   },
 
-  // Xóa sản phẩm
   deleteProduct: async (req, res) => {
     try {
       const { id } = req.params;
@@ -175,6 +190,88 @@ const productController = {
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Lỗi server" });
+    }
+  },
+
+  getAllCategories: async (req, res) => {
+    try {
+      const pool = await sql.connect(config);
+      const result = await pool.request().query('SELECT * FROM Category ORDER BY CategoryName');
+      res.json(result.recordset);
+    } catch (err) {
+      console.error('❌ Lỗi khi tải danh mục:', err);
+      res.json([
+        { CategoryID: 1, CategoryName: "Áo bóng đá" },
+        { CategoryID: 2, CategoryName: "Quần bóng đá" },
+        { CategoryID: 3, CategoryName: "Giày bóng đá" },
+        { CategoryID: 4, CategoryName: "Phụ kiện" },
+        { CategoryID: 5, CategoryName: "Áo khoác thể thao" }
+      ]);
+    }
+  },
+
+  getAllBrands: async (req, res) => {
+    try {
+      const pool = await sql.connect(config);
+      const result = await pool.request().query('SELECT * FROM Brand ORDER BY BrandName');
+      res.json(result.recordset);
+    } catch (err) {
+      console.error('❌ Lỗi khi tải thương hiệu:', err);
+      res.json([
+        { BrandID: 1, BrandName: "Adidas" },
+        { BrandID: 2, BrandName: "Nike" },
+        { BrandID: 3, BrandName: "Puma" },
+        { BrandID: 4, BrandName: "Mizuno" },
+        { BrandID: 5, BrandName: "New Balance" }
+      ]);
+    }
+  },
+
+  getAllClubs: async (req, res) => {
+    try {
+      const pool = await sql.connect(config);
+      const result = await pool.request().query('SELECT * FROM ClubTeam ORDER BY ClubName');
+      res.json(result.recordset);
+    } catch (err) {
+      console.error('❌ Lỗi khi tải câu lạc bộ:', err);
+      res.json([
+        { ClubID: 1, ClubName: "Arsenal" },
+        { ClubID: 2, ClubName: "Barcelona" },
+        { ClubID: 3, ClubName: "Bayern Munich" },
+        { ClubID: 4, ClubName: "Chelsea" },
+        { ClubID: 5, ClubName: "Inter Miami" },
+        { ClubID: 6, ClubName: "Juventus" },
+        { ClubID: 7, ClubName: "Liverpool" },
+        { ClubID: 8, ClubName: "Manchester City" },
+        { ClubID: 9, ClubName: "Manchester United" },
+        { ClubID: 10, ClubName: "Paris Saint-Germain" },
+        { ClubID: 11, ClubName: "Real Madrid" },
+        { ClubID: 12, ClubName: "Tottenham Hotspur" }
+      ]);
+    }
+  },
+
+  getAllSizes: async (req, res) => {
+    try {
+      const pool = await sql.connect(config);
+      const result = await pool.request().query('SELECT * FROM ProductSize ORDER BY SizeID');
+      res.json(result.recordset);
+    } catch (err) {
+      console.error('❌ Lỗi khi tải kích thước:', err);
+      res.json([
+        { SizeID: 1, SizeName: "S", SizeType: "Áo" },
+        { SizeID: 2, SizeName: "M", SizeType: "Áo" },
+        { SizeID: 3, SizeName: "L", SizeType: "Áo" },
+        { SizeID: 4, SizeName: "XL", SizeType: "Áo" },
+        { SizeID: 5, SizeName: "XXL", SizeType: "Áo" },
+        { SizeID: 6, SizeName: "38", SizeType: "Giày" },
+        { SizeID: 7, SizeName: "39", SizeType: "Giày" },
+        { SizeID: 8, SizeName: "40", SizeType: "Giày" },
+        { SizeID: 9, SizeName: "41", SizeType: "Giày" },
+        { SizeID: 10, SizeName: "42", SizeType: "Giày" },
+        { SizeID: 11, SizeName: "43", SizeType: "Giày" },
+        { SizeID: 12, SizeName: "44", SizeType: "Giày" }
+      ]);
     }
   }
 };
