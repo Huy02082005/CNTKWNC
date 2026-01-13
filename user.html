@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý người dùng - Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/user.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Admin Dashboard</h2>
+      <p>Quản trị hệ thống</p>
+    </div>
+    
+    <div class="sidebar-menu">
+      <ul>
+        <li><a href="dashboard.html"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+        <li class="active"><a href="user.html"><i class="fas fa-users"></i> <span>Quản lý người dùng</span></a></li>
+        <li><a href="orders.html"><i class="fas fa-shopping-cart"></i> <span>Đơn hàng</span></a></li>
+        <li><a href="products.html"><i class="fas fa-box"></i> <span>Sản phẩm</span></a></li>
+        <li><a href="admin.html"><i class="fas fa-user-shield"></i> <span>Quản lý admin</span></a></li>
+        <li><a href="settings.html"><i class="fas fa-cog"></i> <span>Cài đặt</span></a></li>
+        <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span></a></li>
+      </ul>
+    </div>
+  </div>
+  
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="header">
+      <h1><i class="fas fa-users"></i> Quản lý khách hàng</h1>
+      <div class="user-actions">
+        <button class="btn btn-primary" onclick="showAddUserModal()">
+          <i class="fas fa-plus"></i> Thêm khách hàng
+        </button>
+        <button class="btn btn-outline" onclick="exportUsers()">
+          <i class="fas fa-download"></i> Export
+        </button>
+      </div>
+    </div>
+    
+    <!-- Stats Cards - CHỈ CÒN 1 CARD -->
+    <div class="stats-cards">
+      <div class="card">
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Khách hàng</h3>
+            <h2 id="totalUsers">0</h2>
+          </div>
+          <div class="stat-icon bg-primary">
+            <i class="fas fa-users"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Search and Filter -->
+    <div class="search-filter">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Tìm kiếm theo tên, email, số điện thoại..." onkeyup="filterUsers()">
+      </div>
+    </div>
+    
+    <!-- Users Table -->
+    <div class="table-container">
+      <div class="table-header">
+        <h2>Danh sách khách hàng</h2>
+        <div class="table-actions">
+          <button class="btn btn-outline" onclick="reloadUsers()">
+            <i class="fas fa-sync-alt"></i> Làm mới
+          </button>
+        </div>
+      </div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Khách hàng</th>
+            <th>Thông tin liên hệ</th>
+            <th>Ngày tham gia</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <!-- Dữ liệu sẽ được thêm bằng JavaScript -->
+        </tbody>
+      </table>
+      
+      <!-- Pagination -->
+      <div class="pagination" id="pagination">
+        <!-- Pagination sẽ được thêm bằng JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit User Modal -->
+  <div id="editUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 500px;">
+      <h2 style="margin-bottom: 20px;"><i class="fas fa-edit"></i> Sửa thông tin khách hàng</h2>
+      
+      <form id="editUserForm">
+        <input type="hidden" id="editUserId">
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: 500;">Họ tên *</label>
+          <input type="text" id="editFullName" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: 500;">Email *</label>
+          <input type="email" id="editEmail" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: 500;">Số điện thoại</label>
+          <input type="tel" id="editPhone" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: 500;">Địa chỉ</label>
+          <textarea id="editAddress" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; height: 80px;"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 25px;">
+          <button type="button" class="btn btn-outline" onclick="closeEditModal()" style="flex: 1;">Hủy</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Cập nhật</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add User Modal -->
+  <div id="addUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 500px;">
+      <h2 style="margin-bottom: 20px;"><i class="fas fa-user-plus"></i> Thêm khách hàng mới</h2>
+      
+      <form id="addUserForm">
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: 500;">Họ tên *</label>
+          <input type="text" id="fullName" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: 500;">Email *</label>
+          <input type="email" id="email" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: 500;">Số điện thoại</label>
+          <input type="tel" id="phone" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: 500;">Địa chỉ</label>
+          <textarea id="address" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; height: 80px;"></textarea>
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 25px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal()" style="flex: 1;">Hủy</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Thêm khách hàng</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let allUsers = [];
+    let currentPage = 1;
+    const usersPerPage = 10;
+
+    console.log("🚀 user.html script loaded!");
+
+    // Kiểm tra đăng nhập
+    document.addEventListener('DOMContentLoaded', function() {
+      const logged = localStorage.getItem("logged");
+      
+      if (logged !== "true") {
+        alert("Bạn không có quyền truy cập!");
+        window.location.href = "/login.html";
+        return;
+      }
+      
+      loadUsers();
+    });
+
+    async function loadUsers() {
+      try {
+        console.log("🔄 Đang tải danh sách khách hàng...");
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        const response = await fetch('/customer', {
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        console.log("📊 Response status:", response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ Response error:", errorText);
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const customers = await response.json();
+        console.log("✅ CUSTOMERS LOADED SUCCESSFULLY:", customers);
+        
+        allUsers = customers;
+        updateUsersStats(customers);
+        displayUsers(customers);
+        
+      } catch (error) {
+        console.error('❌ Lỗi khi tải khách hàng:', error);
+        
+        if (error.name === 'AbortError') {
+          alert('⏰ Timeout: Không thể kết nối đến server sau 10 giây');
+        } else {
+          alert('Lỗi tải dữ liệu: ' + error.message);
+        }
+        
+        showFallbackData();
+      }
+    }
+
+    // Cập nhật thống kê - ĐÃ SỬA
+    function updateUsersStats(users) {
+      const totalUsers = users.length;
+      
+      console.log("📊 Total customers:", totalUsers);
+      
+      document.getElementById('totalUsers').textContent = totalUsers;
+    }
+
+    // Hiển thị danh sách khách hàng - ĐÃ SỬA
+    function displayUsers(users) {
+      const tbody = document.getElementById('usersTableBody');
+      if (!tbody) {
+        console.error("❌ Không tìm thấy usersTableBody");
+        return;
+      }
+      
+      tbody.innerHTML = '';
+      
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;">Không tìm thấy khách hàng nào</td></tr>';
+        return;
+      }
+      
+      // Phân trang
+      const startIndex = (currentPage - 1) * usersPerPage;
+      const paginatedUsers = users.slice(startIndex, startIndex + usersPerPage);
+      
+      paginatedUsers.forEach(user => {
+        const row = document.createElement('tr');
+        
+        const avatarIndex = (user.CustomerID % 70) + 1;
+        
+        row.innerHTML = `
+        <td>
+          <div class="user-info">
+            <img src="https://i.pravatar.cc/150?img=${avatarIndex}" 
+                alt="Avatar" class="user-avatar">
+            <div>
+              <strong>${user.FullName || 'Chưa có tên'}</strong>
+              <br>
+              <small style="color: #666;">ID: ${user.CustomerID}</small>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div>
+            <strong>${user.Email || 'Chưa có email'}</strong>
+            <br>
+            <small style="color: #666;">${user.Phone || 'Chưa có số ĐT'}</small>
+            <br>
+            <small style="color: #888;">${user.Address || 'Chưa có địa chỉ'}</small>
+          </div>
+        </td>
+        <td>${formatDate(user.RegisterDate)}</td>
+        <td>
+          <button class="btn btn-outline btn-sm edit-btn" data-id="${user.CustomerID}">
+            <i class="fas fa-edit"></i> Sửa
+          </button>
+          <button class="btn btn-danger btn-sm delete-btn" data-id="${user.CustomerID}">
+            <i class="fas fa-trash"></i> Xóa
+          </button>
+        </td>
+        `;
+        
+        tbody.appendChild(row);
+      });
+      
+      // Hiển thị phân trang
+      setupPagination(users.length);
+    }
+
+    // THÊM EVENT DELEGATION CHO TOÀN BỘ TABLE
+    document.addEventListener('DOMContentLoaded', function() {
+      // Event delegation cho nút Sửa và Xóa
+      document.getElementById('usersTableBody').addEventListener('click', function(e) {
+        const target = e.target;
+        
+        // Nút Sửa
+        if (target.classList.contains('edit-btn') || target.closest('.edit-btn')) {
+          const btn = target.classList.contains('edit-btn') ? target : target.closest('.edit-btn');
+          const userId = btn.getAttribute('data-id');
+          console.log("✏️ Edit clicked:", userId);
+          editUser(parseInt(userId));
+        }
+        
+        // Nút Xóa
+        if (target.classList.contains('delete-btn') || target.closest('.delete-btn')) {
+          const btn = target.classList.contains('delete-btn') ? target : target.closest('.delete-btn');
+          const userId = btn.getAttribute('data-id');
+          console.log("🗑️ Delete clicked:", userId);
+          deleteUser(parseInt(userId));
+        }
+      });
+      
+      // Kiểm tra đăng nhập và load users
+      const logged = localStorage.getItem("logged");
+      
+      if (logged !== "true") {
+        alert("Bạn không có quyền truy cập!");
+        window.location.href = "/login.html";
+        return;
+      }
+      
+      loadUsers();
+    });
+
+    // Lọc khách hàng - ĐÃ SỬA
+    function filterUsers() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      
+      console.log("🔍 Filtering - Search:", searchTerm);
+      
+      let filteredUsers = allUsers.filter(user => {
+        const matchesSearch = !searchTerm || 
+          (user.FullName && user.FullName.toLowerCase().includes(searchTerm)) ||
+          (user.Email && user.Email.toLowerCase().includes(searchTerm)) ||
+          (user.Phone && user.Phone.toLowerCase().includes(searchTerm));
+        
+        return matchesSearch;
+      });
+      
+      console.log("📊 Filtered users:", filteredUsers.length);
+      
+      currentPage = 1;
+      displayUsers(filteredUsers);
+    }
+
+    // Phân trang
+    function setupPagination(totalUsers) {
+      const pagination = document.getElementById('pagination');
+      const totalPages = Math.ceil(totalUsers / usersPerPage);
+      
+      pagination.innerHTML = '';
+      
+      if (totalPages <= 1) return;
+      
+      // Nút Previous
+      const prevButton = document.createElement('button');
+      prevButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
+      prevButton.disabled = currentPage === 1;
+      prevButton.onclick = () => {
+        if (currentPage > 1) {
+          currentPage--;
+          displayUsers(allUsers);
+        }
+      };
+      pagination.appendChild(prevButton);
+      
+      // Các nút trang
+      for (let i = 1; i <= totalPages; i++) {
+        const pageButton = document.createElement('button');
+        pageButton.textContent = i;
+        pageButton.className = currentPage === i ? 'active' : '';
+        pageButton.onclick = () => {
+          currentPage = i;
+          displayUsers(allUsers);
+        };
+        pagination.appendChild(pageButton);
+      }
+      
+      // Nút Next
+      const nextButton = document.createElement('button');
+      nextButton.innerHTML = '<i class="fas fa-chevron-right"></i>';
+      nextButton.disabled = currentPage === totalPages;
+      nextButton.onclick = () => {
+        if (currentPage < totalPages) {
+          currentPage++;
+          displayUsers(allUsers);
+        }
+      };
+      pagination.appendChild(nextButton);
+    }
+
+    // Hàm phụ trợ
+    function formatDate(dateString) {
+      if (!dateString) return 'Chưa có ngày';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('vi-VN');
+    }
+
+    function reloadUsers() {
+      loadUsers();
+    }
+
+    function showAddUserModal() {
+      document.getElementById('addUserModal').style.display = 'block';
+    }
+
+    // Sửa user - Hiển thị modal - ĐÃ SỬA
+    async function editUser(userId) {
+      console.log("✏️ EDIT USER CALLED:", userId);
+      
+      try {
+        const user = allUsers.find(u => u.CustomerID === userId);
+        if (!user) {
+          alert('Không tìm thấy khách hàng!');
+          return;
+        }
+        
+        console.log("👤 User data for edit:", user);
+        
+        // Điền thông tin vào form
+        document.getElementById('editUserId').value = user.CustomerID;
+        document.getElementById('editFullName').value = user.FullName || '';
+        document.getElementById('editEmail').value = user.Email || '';
+        document.getElementById('editPhone').value = user.Phone || '';
+        document.getElementById('editAddress').value = user.Address || '';
+        
+        document.getElementById('editUserModal').style.display = 'block';
+        
+      } catch (error) {
+        console.error('Lỗi khi chuẩn bị sửa user:', error);
+        alert('Lỗi khi mở form sửa!');
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('addUserModal').style.display = 'none';
+      document.getElementById('addUserForm').reset();
+    }
+
+    function closeEditModal() {
+      document.getElementById('editUserModal').style.display = 'none';
+    }
+
+    // Xử lý thêm user - ĐÃ SỬA
+    document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const userData = {
+        FullName: document.getElementById('fullName').value,
+        Email: document.getElementById('email').value,
+        Phone: document.getElementById('phone').value,
+        Address: document.getElementById('address').value
+      };
+      
+      try {
+        console.log("🔄 Đang gửi request thêm user...", userData);
+        
+        const response = await fetch('/customer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(userData)
+        });
+        
+        console.log("📊 Response status:", response.status);
+        
+        const responseText = await response.text();
+        console.log("📄 Response text:", responseText);
+        
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error("❌ Không parse được JSON:", parseError);
+          throw new Error(`Server trả về HTML thay vì JSON. Status: ${response.status}`);
+        }
+        
+        if (response.ok) {
+          alert('✅ Thêm khách hàng thành công!');
+          closeModal();
+          await loadUsers();
+        } else {
+          alert('❌ Lỗi: ' + (result.message || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('💥 Lỗi khi thêm user:', error);
+        alert('💥 Lỗi khi thêm khách hàng: ' + error.message);
+      }
+    });
+
+    // Xử lý cập nhật user - ĐÃ SỬA
+    document.getElementById('editUserForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const userId = document.getElementById('editUserId').value;
+      const userData = {
+        FullName: document.getElementById('editFullName').value,
+        Email: document.getElementById('editEmail').value,
+        Phone: document.getElementById('editPhone').value,
+        Address: document.getElementById('editAddress').value
+      };
+      
+      console.log("🔄 Đang cập nhật user:", userId, userData);
+      
+      try {
+        const response = await fetch(`/customer/${userId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(userData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          alert('✅ Cập nhật khách hàng thành công!');
+          closeEditModal();
+          await loadUsers();
+        } else {
+          alert('❌ Lỗi: ' + result.message);
+        }
+      } catch (error) {
+        console.error('Lỗi khi cập nhật user:', error);
+        alert('💥 Lỗi khi cập nhật khách hàng!');
+      }
+    });
+
+    // Xóa user
+    async function deleteUser(userId) {
+      if (!confirm('Bạn có chắc muốn xóa khách hàng này? Hành động này không thể hoàn tác!')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/customer/${userId}`, {
+          method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          alert('Xóa khách hàng thành công!');
+          loadUsers();
+        } else {
+          alert('Lỗi: ' + result.message);
+        }
+      } catch (error) {
+        console.error('Lỗi khi xóa user:', error);
+        alert('Lỗi khi xóa khách hàng!');
+      }
+    }
+
+    function exportUsers() {
+      alert('Chức năng export sẽ được phát triển sau!');
+    }
+
+    function logout() {
+      localStorage.removeItem("logged");
+      localStorage.removeItem("username");
+      window.location.href = "/login.html";
+    }
+
+    // Dữ liệu mẫu nếu API lỗi
+    function showFallbackData() {
+      document.getElementById('totalUsers').textContent = '0';
+      
+      const tbody = document.getElementById('usersTableBody');
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="4" style="text-align: center; padding: 40px; color: #666;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px;"></i>
+            <br>
+            Không thể tải dữ liệu khách hàng
+            <br>
+            <button class="btn btn-outline" onclick="loadUsers()" style="margin-top: 10px;">
+              Thử lại
+            </button>
+          </td>
+        </tr>
+      `;
+    }
+
+    // Xử lý menu active
+    const menuItems = document.querySelectorAll('.sidebar-menu li');
+    menuItems.forEach(item => {
+      item.addEventListener('click', function() {
+        menuItems.forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+
+    // Đóng modal khi click outside
+    window.onclick = function(event) {
+      const addModal = document.getElementById('addUserModal');
+      const editModal = document.getElementById('editUserModal');
+      
+      if (event.target === addModal) {
+        closeModal();
+      }
+      if (event.target === editModal) {
+        closeEditModal();
+      }
+    }
+  </script>
+</body>
+</html>

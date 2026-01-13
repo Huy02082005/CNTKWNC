@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Admin Dashboard</h2>
+      <p>Quản trị hệ thống</p>
+    </div>
+    
+    <div class="sidebar-menu">
+      <ul>
+        <li class="active"><a href="#"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+        <li><a href="user.html"><i class="fas fa-users"></i> <span>Quản lý người dùng</span></a></li>
+        <li><a href="orders.html"><i class="fas fa-shopping-cart"></i> <span>Đơn hàng</span></a></li>
+        <li><a href="products.html"><i class="fas fa-box"></i> <span>Sản phẩm</span></a></li>
+        <!-- Menu Admin - CHỈ HIỂN THỊ KHI LÀ SUPER ADMIN -->
+        <li id="adminMenuItem" style="display: none;">
+          <a href="admin.html">
+            <i class="fas fa-user-shield"></i> 
+            <span>Quản lý admin</span>
+          </a>
+        </li>
+        <li><a href="settings.html"><i class="fas fa-cog"></i> <span>Cài đặt</span></a></li>
+        <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span></a></li>
+      </ul>
+    </div>
+  </div>
+  
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="header">
+      <h1>Dashboard</h1>
+      <div class="user-info">
+        <img src="https://i.pravatar.cc/150?img=12" alt="Admin Avatar">
+        <div>
+          <h3 id="adminName">Loading...</h3>
+          <p id="adminRole">Admin</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="stats-cards">
+      <div class="card">
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Tổng người dùng</h3>
+            <h2 id="totalUsers">0</h2>
+            <p><i class="fas fa-arrow-up text-success"></i> <span id="userChange">0%</span> so với tháng trước</p>
+          </div>
+          <div class="stat-icon bg-primary">
+            <i class="fas fa-users"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Tổng đơn hàng</h3>
+            <h2 id="totalOrders">0</h2>
+            <p><i class="fas fa-arrow-up text-success"></i> <span id="orderChange">0%</span> so với tháng trước</p>
+          </div>
+          <div class="stat-icon bg-success">
+            <i class="fas fa-shopping-cart"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Doanh thu</h3>
+            <h2 id="totalRevenue">0 VNĐ</h2>
+            <p><i class="fas fa-arrow-up text-success"></i> <span id="revenueChange">0%</span> so với tháng trước</p>
+          </div>
+          <div class="stat-icon bg-warning">
+            <i class="fas fa-dollar-sign"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Sản phẩm</h3>
+            <h2 id="totalProducts">0</h2>
+            <p><i class="fas fa-arrow-down text-danger"></i> <span id="productChange">0%</span> so với tháng trước</p>
+          </div>
+          <div class="stat-icon bg-dark">
+            <i class="fas fa-box"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Recent Orders Table -->
+    <div class="table-container">
+      <div class="table-header">
+        <h2>Đơn hàng gần đây</h2>
+        <a href="orders.html" class="btn btn-primary">Xem tất cả</a>
+      </div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Mã đơn hàng</th>
+            <th>Khách hàng</th>
+            <th>Ngày đặt</th>
+            <th>Tổng tiền</th>
+            <th>Trạng thái</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="ordersTableBody">
+          <tr>
+            <td colspan="6" style="text-align: center;">Đang tải dữ liệu...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Users Table -->
+    <div class="table-container">
+      <div class="table-header">
+        <h2>Người dùng mới</h2>
+        <a href="user.html" class="btn btn-primary">Thêm người dùng</a>
+      </div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Tên người dùng</th>
+            <th>Email</th>
+            <th>Ngày tham gia</th>
+            <th>Vai trò</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="customersTableBody">
+          <tr>
+            <td colspan="5" style="text-align: center;">Đang tải dữ liệu...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+
+    document.addEventListener('DOMContentLoaded', async function() {
+      await checkAuthAndLoadData();
+    });
+
+    async function checkAuthAndLoadData() {
+      try {
+        const authResponse = await fetch('/api/auth/check', {
+          credentials: 'include'
+        });
+        
+        if (!authResponse.ok) {
+          window.location.href = "/login.html";
+          return;
+        }
+        
+        const authData = await authResponse.json();
+        
+        if (!authData.authenticated) {
+          window.location.href = "/login.html";
+          return;
+        }
+        
+        currentUser = authData.user;
+        
+        document.getElementById('adminName').textContent = currentUser.username;
+        document.getElementById('adminRole').textContent = 
+          currentUser.isSuperAdmin ? '👑 Super Admin' : 'Admin';
+        
+        const adminMenuItem = document.getElementById('adminMenuItem');
+        if (currentUser.isSuperAdmin && adminMenuItem) {
+          adminMenuItem.style.display = 'block';
+        }
+        
+        // 5. Setup menu active
+        setupMenuActive();
+        
+        // 6. Tải dữ liệu dashboard
+        await loadDashboardData();
+        
+      } catch (error) {
+        console.error('❌ Lỗi kiểm tra auth:', error);
+        window.location.href = "/login.html";
+      }
+    }
+
+    // Hàm tải dữ liệu dashboard
+    async function loadDashboardData() {
+      try {
+        console.log("🔄 Đang tải dữ liệu dashboard...");
+        
+        // Tải stats
+        await loadDashboardStats();
+        
+        // Tải đơn hàng gần đây
+        await loadRecentOrders();
+        
+        // Tải khách hàng mới
+        await loadRecentCustomers();
+        
+      } catch (error) {
+        console.error('❌ Lỗi tải dữ liệu:', error);
+      }
+    }
+
+    // Hàm tải thống kê dashboard
+    async function loadDashboardStats() {
+      try {
+        const response = await fetch('/dashboard/stats', {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          console.warn('Không thể tải stats, sử dụng data mẫu');
+          showFallbackStats();
+          return;
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          const stats = result.data;
+          
+          // Cập nhật UI
+          document.getElementById('totalUsers').textContent = stats.totalCustomers || '0';
+          document.getElementById('totalOrders').textContent = stats.totalOrders || '0';
+          document.getElementById('totalRevenue').textContent = formatCurrency(stats.totalRevenue) || '0 VNĐ';
+          document.getElementById('totalProducts').textContent = stats.totalProducts || '0';
+          
+        } else {
+          showFallbackStats();
+        }
+        
+      } catch (error) {
+        console.error('❌ Lỗi tải stats:', error);
+        showFallbackStats();
+      }
+    }
+
+    // Hàm tải đơn hàng gần đây
+    async function loadRecentOrders() {
+      try {
+        const response = await fetch('/order?limit=5', {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          console.warn('Không thể tải đơn hàng, sử dụng data mẫu');
+          showFallbackOrders();
+          return;
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          updateOrdersTable(result.data.slice(0, 5));
+        } else {
+          showFallbackOrders();
+        }
+        
+      } catch (error) {
+        console.error('❌ Lỗi tải đơn hàng:', error);
+        showFallbackOrders();
+      }
+    }
+
+    // Hàm tải khách hàng mới
+    async function loadRecentCustomers() {
+      try {
+        const response = await fetch('/customer?limit=3', {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          console.warn('Không thể tải khách hàng, sử dụng data mẫu');
+          showFallbackCustomers();
+          return;
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          updateCustomersTable(result.data.slice(0, 3));
+        } else {
+          showFallbackCustomers();
+        }
+        
+      } catch (error) {
+        console.error('❌ Lỗi tải khách hàng:', error);
+        showFallbackCustomers();
+      }
+    }
+
+    // Cập nhật bảng đơn hàng
+    function updateOrdersTable(orders) {
+      const tbody = document.getElementById('ordersTableBody');
+      
+      if (!orders || orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Chưa có đơn hàng nào</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = orders.map(order => `
+        <tr>
+          <td>#ORD-${order.OrderID || order.id}</td>
+          <td>${order.FullName || order.CustomerName || 'Khách hàng'}</td>
+          <td>${formatDate(order.OrderDate || order.createdAt)}</td>
+          <td>${formatCurrency(order.TotalPrice || order.total)}</td>
+          <td><span class="status ${getStatusClass(order.Status || order.status)}">
+            ${getStatusText(order.Status || order.status)}
+          </span></td>
+          <td>
+            <button class="btn btn-outline" onclick="viewOrderDetail(${order.OrderID || order.id})">
+              Chi tiết
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Cập nhật bảng khách hàng
+    function updateCustomersTable(customers) {
+      const tbody = document.getElementById('customersTableBody');
+      
+      if (!customers || customers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Chưa có khách hàng nào</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = customers.map(customer => `
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center;">
+              <img src="https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70) + 1}" 
+                   alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 10px;">
+              ${customer.FullName || customer.Username || customer.name || 'Khách hàng'}
+            </div>
+          </td>
+          <td>${customer.Email || customer.email || 'Chưa có email'}</td>
+          <td>${formatDate(customer.RegisterDate || customer.createdAt)}</td>
+          <td>${(customer.Role === 'admin' || customer.isAdmin) ? 'Admin' : 'Khách hàng'}</td>
+          <td>
+            <button class="btn btn-outline" onclick="editCustomer(${customer.CustomerID || customer.id})">
+              Sửa
+            </button>
+            <button class="btn btn-danger" onclick="deleteCustomer(${customer.CustomerID || customer.id})">
+              Xóa
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Hàm đăng xuất
+    async function logout() {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+        
+        // Redirect về login
+        window.location.href = "/login.html";
+        
+      } catch (error) {
+        console.error('Logout error:', error);
+        window.location.href = "/login.html";
+      }
+    }
+
+    // Xử lý menu active
+    function setupMenuActive() {
+      const menuItems = document.querySelectorAll('.sidebar-menu li');
+      menuItems.forEach(item => {
+        item.addEventListener('click', function() {
+          menuItems.forEach(i => i.classList.remove('active'));
+          this.classList.add('active');
+        });
+      });
+    }
+
+    // ========== HÀM PHỤ TRỢ ==========
+
+    // Hiển thị dữ liệu mẫu khi API lỗi
+    function showFallbackStats() {
+      document.getElementById('totalUsers').textContent = '1,248';
+      document.getElementById('totalOrders').textContent = '564';
+      document.getElementById('totalRevenue').textContent = '245,000,000 VNĐ';
+      document.getElementById('totalProducts').textContent = '1,024';
+    }
+
+    function showFallbackOrders() {
+      const tbody = document.getElementById('ordersTableBody');
+      tbody.innerHTML = `
+        <tr>
+          <td>#ORD-7842</td>
+          <td>Nguyễn Văn A</td>
+          <td>15/10/2023</td>
+          <td>1,250,000 VNĐ</td>
+          <td><span class="status active">Đã giao</span></td>
+          <td><button class="btn btn-outline">Chi tiết</button></td>
+        </tr>
+        <tr>
+          <td>#ORD-7841</td>
+          <td>Trần Thị B</td>
+          <td>14/10/2023</td>
+          <td>2,450,000 VNĐ</td>
+          <td><span class="status pending">Đang xử lý</span></td>
+          <td><button class="btn btn-outline">Chi tiết</button></td>
+        </tr>
+      `;
+    }
+
+    function showFallbackCustomers() {
+      const tbody = document.getElementById('customersTableBody');
+      tbody.innerHTML = `
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center;">
+              <img src="https://i.pravatar.cc/150?img=1" alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 10px;">
+              Nguyễn Văn A
+            </div>
+          </td>
+          <td>nguyenvana@example.com</td>
+          <td>12/10/2023</td>
+          <td>Khách hàng</td>
+          <td>
+            <button class="btn btn-outline">Sửa</button>
+            <button class="btn btn-danger">Xóa</button>
+          </td>
+        </tr>
+      `;
+    }
+
+    // Định dạng tiền tệ
+    function formatCurrency(amount) {
+      if (!amount) return '0 VNĐ';
+      return new Intl.NumberFormat('vi-VN').format(amount) + ' VNĐ';
+    }
+
+    // Định dạng ngày
+    function formatDate(dateString) {
+      if (!dateString) return 'Chưa có ngày';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('vi-VN');
+    }
+
+    // Lấy class cho trạng thái
+    function getStatusClass(status) {
+      const statusMap = {
+        'completed': 'active',
+        'delivered': 'active', 
+        'paid': 'active',
+        'pending': 'pending',
+        'processing': 'pending',
+        'shipping': 'pending',
+        'cancelled': 'pending'
+      };
+      return statusMap[status] || 'pending';
+    }
+
+    // Lấy text cho trạng thái
+    function getStatusText(status) {
+      const statusTextMap = {
+        'completed': 'Đã giao',
+        'delivered': 'Đã giao',
+        'paid': 'Đã thanh toán',
+        'pending': 'Đang xử lý',
+        'processing': 'Đang xử lý',
+        'shipping': 'Đang giao hàng',
+        'cancelled': 'Đã hủy'
+      };
+      return statusTextMap[status] || 'Đang xử lý';
+    }
+
+    // Xem chi tiết đơn hàng
+    function viewOrderDetail(orderId) {
+      window.location.href = `order-detail.html?id=${orderId}`;
+    }
+
+    // Sửa khách hàng
+    function editCustomer(customerId) {
+      window.location.href = `user-edit.html?id=${customerId}`;
+    }
+
+    // Xóa khách hàng
+    function deleteCustomer(customerId) {
+      if (confirm('Bạn có chắc muốn xóa khách hàng này?')) {
+        console.log('Xóa khách hàng:', customerId);
+        // Gọi API xóa ở đây
+      }
+    }
+  </script>
+</body>
+</html>

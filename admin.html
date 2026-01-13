@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản Lý Tài Khoản Admin - Admin Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Admin Dashboard</h2>
+      <p>Quản trị hệ thống</p>
+    </div>
+    
+    <div class="sidebar-menu">
+      <ul>
+        <li><a href="dashboard.html"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+        <li><a href="user.html"><i class="fas fa-users"></i> <span>Quản lý người dùng</span></a></li>
+        <li><a href="orders.html"><i class="fas fa-shopping-cart"></i> <span>Đơn hàng</span></a></li>
+        <li><a href="products.html"><i class="fas fa-box"></i> <span>Sản phẩm</span></a></li>
+        <li class="active"><a href="admin.html"><i class="fas fa-user-shield"></i> <span>Quản lý admin</span></a></li>
+        <li><a href="settings.html"><i class="fas fa-cog"></i> <span>Cài đặt</span></a></li>
+        <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span></a></li>
+      </ul>
+    </div>
+  </div>
+  
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="header">
+      <h1>Quản Lý Tài Khoản Admin</h1>
+      <div class="user-info">
+        <img src="https://i.pravatar.cc/150?img=12" alt="Admin Avatar">
+        <div>
+          <h3 id="adminName">Nguyễn Đức Huy</h3>
+          <p>Quản trị viên</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="action-bar">
+      <button class="btn btn-primary" onclick="showAddAdminModal()">
+        <i class="fas fa-plus"></i> Thêm Admin Mới
+      </button>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Tìm kiếm theo tên, email...">
+        <button class="btn btn-outline" onclick="searchAdmins()">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="stats-cards">
+      <div class="card">
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Tổng Admin</h3>
+            <h2 id="totalAdmins">0</h2>
+            <p id="adminChange"><i class="fas fa-arrow-up text-success"></i> 0% so với tháng trước</p>
+          </div>
+          <div class="stat-icon bg-primary">
+            <i class="fas fa-user-shield"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Admin Đang Hoạt Động</h3>
+            <h2 id="activeAdmins">0</h2>
+            <p id="activeChange"><i class="fas fa-arrow-up text-success"></i> 0% so với tháng trước</p>
+          </div>
+          <div class="stat-icon bg-success">
+            <i class="fas fa-user-check"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Super Admin</h3>
+            <h2 id="superAdmins">0</h2>
+            <p id="superChange"><i class="fas fa-minus text-secondary"></i> Không thay đổi</p>
+          </div>
+          <div class="stat-icon bg-warning">
+            <i class="fas fa-crown"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Admin Accounts Table -->
+    <div class="table-container">
+      <div class="table-header">
+        <h2>Danh Sách Tài Khoản Admin</h2>
+        <div class="table-actions">
+          <select id="statusFilter" onchange="filterAdmins()">
+            <option value="all">Tất cả trạng thái</option>
+            <option value="active">Đang hoạt động</option>
+            <option value="inactive">Đã khóa</option>
+          </select>
+          <button class="btn btn-outline" onclick="refreshAdmins()">
+            <i class="fas fa-sync-alt"></i> Làm mới
+          </button>
+        </div>
+      </div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tên đăng nhập</th>
+            <th>Họ tên</th>
+            <th>Email</th>
+            <th>Điện thoại</th>
+            <th>Ngày tạo</th>
+            <th>Đăng nhập gần nhất</th>
+            <th>Quyền</th>
+            <th>Trạng thái</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="adminsTableBody">
+          <!-- Dữ liệu sẽ được tải bằng JavaScript -->
+          <tr>
+            <td colspan="10" style="text-align: center;">Đang tải dữ liệu...</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <!-- Pagination -->
+      <div class="pagination" id="pagination">
+        <!-- Pagination sẽ được tạo bằng JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Thêm/Sửa Admin -->
+  <div id="adminModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Thêm Admin Mới</h2>
+        <span class="close" onclick="closeAdminModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form id="adminForm" onsubmit="saveAdmin(event)">
+          <input type="hidden" id="adminId" value="">
+          
+          <div class="form-group">
+            <label for="username">Tên đăng nhập *</label>
+            <input type="text" id="username" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="password">Mật khẩu *</label>
+            <input type="password" id="password" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="confirmPassword">Xác nhận mật khẩu *</label>
+            <input type="password" id="confirmPassword" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="fullName">Họ và tên</label>
+            <input type="text" id="fullName">
+          </div>
+          
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email">
+          </div>
+          
+          <div class="form-group">
+            <label for="phone">Số điện thoại</label>
+            <input type="text" id="phone">
+          </div>
+          
+          <div class="form-group">
+            <label for="isSuperAdmin">Quyền</label>
+            <select id="isSuperAdmin">
+              <option value="false">Admin</option>
+              <option value="true">Super Admin</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="status">Trạng thái</label>
+            <select id="status">
+              <option value="true">Hoạt động</option>
+              <option value="false">Khóa</option>
+            </select>
+          </div>
+          
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" onclick="closeAdminModal()">Hủy</button>
+            <button type="submit" class="btn btn-primary">Lưu</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Xác nhận xóa -->
+  <div id="confirmModal" class="modal">
+    <div class="modal-content confirm-modal">
+      <div class="modal-header">
+        <h2>Xác nhận xóa</h2>
+      </div>
+      <div class="modal-body">
+        <p>Bạn có chắc chắn muốn xóa tài khoản admin này?</p>
+        <p class="text-danger">Hành động này không thể hoàn tác!</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeConfirmModal()">Hủy</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn">Xóa</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+let currentPage = 1;
+const itemsPerPage = 10;
+let allAdmins = [];
+let filteredAdmins = [];
+let adminToDelete = null;
+
+// Kiểm tra đăng nhập và quyền admin - SỬA HOÀN TOÀN
+document.addEventListener('DOMContentLoaded', async function() {
+    await checkAuthAndPermission();
+});
+
+async function checkAuthAndPermission() {
+    try {
+        // 1. Kiểm tra auth bằng cookies
+        const authResponse = await fetch('/api/auth/check', {
+            credentials: 'include' // QUAN TRỌNG: gửi cookies
+        });
+        
+        if (!authResponse.ok) {
+            window.location.href = "/login.html";
+            return;
+        }
+        
+        const authData = await authResponse.json();
+        console.log("🔍 Auth check:", authData);
+        
+        if (!authData.authenticated) {
+            alert("Vui lòng đăng nhập!");
+            window.location.href = "/login.html";
+            return;
+        }
+        
+        const user = authData.user;
+        
+        // 2. Kiểm tra Super Admin
+        if (!user.isSuperAdmin) {
+            alert("❌ CHỈ SUPER ADMIN MỚI ĐƯỢC TRUY CẬP TRANG NÀY!");
+            window.location.href = "/dashboard.html";
+            return;
+        }
+        
+        console.log("✅ Super Admin verified:", user.username);
+        
+        // 3. Hiển thị thông tin user
+        document.getElementById('adminName').textContent = user.username;
+        document.querySelector('.user-info p').textContent = "👑 Super Admin";
+        
+        // 4. Tải dữ liệu
+        await loadAdmins(user.id);
+        await loadAdminStats();
+        
+        // 5. Setup menu
+        setupMenuActive();
+        
+    } catch (error) {
+        console.error('❌ Lỗi kiểm tra auth:', error);
+        alert("Lỗi xác thực! Vui lòng đăng nhập lại.");
+        window.location.href = "/login.html";
+    }
+}
+
+// Hàm đăng xuất - SỬA
+async function logout() {
+    try {
+        await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include'
+        });
+        window.location.href = "/login.html";
+    } catch (error) {
+        console.error('Logout error:', error);
+        window.location.href = "/login.html";
+    }
+}
+
+// Xử lý menu active - GIỮ NGUYÊN
+function setupMenuActive() {
+    const menuItems = document.querySelectorAll('.sidebar-menu li');
+    menuItems.forEach(item => {
+        item.addEventListener('click', function() {
+            menuItems.forEach(i => i.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+}
+
+// Hàm tải danh sách admin - SỬA
+async function loadAdmins() {
+    try {
+        const response = await fetch('/api/admin', {
+            credentials: 'include' // Gửi cookies
+        });
+        
+        console.log("📊 Admin API status:", response.status);
+        
+        if (response.status === 403) {
+            alert("Bạn không có quyền truy cập!");
+            window.location.href = "/dashboard.html";
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error('Lỗi API: ' + response.status);
+        }
+        
+        allAdmins = await response.json();
+        console.log("👥 Admins nhận được:", allAdmins.length);
+        
+        filteredAdmins = [...allAdmins];
+        renderAdminsTable();
+        
+    } catch (error) {
+        console.error('❌ Lỗi khi tải danh sách admin:', error);
+        document.getElementById('adminsTableBody').innerHTML = `
+            <tr>
+                <td colspan="10" style="text-align: center; color: red;">
+                    Lỗi tải dữ liệu: ${error.message}<br>
+                    <button onclick="location.reload()" class="btn btn-outline">
+                        Thử lại
+                    </button>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// Hàm tải thống kê admin - SỬA
+async function loadAdminStats() {
+    try {
+        const response = await fetch('/api/admin/stats', {
+            credentials: 'include' // Gửi cookies
+        });
+        
+        if (!response.ok) throw new Error('Lỗi khi tải thống kê');
+        
+        const stats = await response.json();
+        console.log("📊 Stats nhận được:", stats);
+        
+        updateStatsUI(stats);
+        
+    } catch (error) {
+        console.error('❌ Lỗi khi tải thống kê:', error);
+        showFallbackStats();
+    }
+}
+
+// Cập nhật UI với dữ liệu thống kê - GIỮ NGUYÊN
+function updateStatsUI(stats) {
+    document.getElementById('totalAdmins').textContent = stats.totalAdmins || '0';
+    document.getElementById('activeAdmins').textContent = stats.activeAdmins || '0';
+    document.getElementById('superAdmins').textContent = stats.superAdmins || '0';
+}
+
+// Hiển thị dữ liệu mẫu khi API lỗi - GIỮ NGUYÊN
+function showFallbackStats() {
+    document.getElementById('totalAdmins').textContent = '0';
+    document.getElementById('activeAdmins').textContent = '0';
+    document.getElementById('superAdmins').textContent = '0';
+}
+
+// Render bảng admin với phân trang - GIỮ NGUYÊN
+function renderAdminsTable() {
+    const tbody = document.getElementById('adminsTableBody');
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageAdmins = filteredAdmins.slice(startIndex, endIndex);
+    
+    if (pageAdmins.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">Không có dữ liệu</td></tr>';
+        renderPagination();
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    
+    pageAdmins.forEach(admin => {
+        const row = document.createElement('tr');
+        
+        row.innerHTML = `
+            <td>${admin.AccountID}</td>
+            <td>${admin.Username}</td>
+            <td>${admin.FullName || 'Chưa cập nhật'}</td>
+            <td>${admin.Email || 'Chưa cập nhật'}</td>
+            <td>${admin.Phone || 'Chưa cập nhật'}</td>
+            <td>${formatDate(admin.CreateDate)}</td>
+            <td>${admin.LastLogin ? formatDate(admin.LastLogin) : 'Chưa đăng nhập'}</td>
+            <td><span class="status ${admin.IsSuperAdmin ? 'warning' : ''}">${admin.IsSuperAdmin ? 'Super Admin' : 'Admin'}</span></td>
+            <td><span class="status ${admin.Status ? 'active' : 'pending'}">${admin.Status ? 'Hoạt động' : 'Đã khóa'}</span></td>
+            <td>
+                <button class="btn btn-outline" onclick="editAdmin(${admin.AccountID})">Sửa</button>
+                <button class="btn btn-danger" onclick="confirmDelete(${admin.AccountID})">Xóa</button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    renderPagination();
+}
+
+// Render phân trang - GIỮ NGUYÊN
+function renderPagination() {
+    const totalPages = Math.ceil(filteredAdmins.length / itemsPerPage);
+    const pagination = document.getElementById('pagination');
+    
+    if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+    
+    let paginationHTML = '';
+    
+    // Nút Previous
+    if (currentPage > 1) {
+        paginationHTML += `<button class="page-btn" onclick="changePage(${currentPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
+    }
+    
+    // Các trang
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === currentPage) {
+            paginationHTML += `<button class="page-btn active">${i}</button>`;
+        } else {
+            paginationHTML += `<button class="page-btn" onclick="changePage(${i})">${i}</button>`;
+        }
+    }
+    
+    // Nút Next
+    if (currentPage < totalPages) {
+        paginationHTML += `<button class="page-btn" onclick="changePage(${currentPage + 1})"><i class="fas fa-chevron-right"></i></button>`;
+    }
+    
+    pagination.innerHTML = paginationHTML;
+}
+
+// Chuyển trang - GIỮ NGUYÊN
+function changePage(page) {
+    currentPage = page;
+    renderAdminsTable();
+}
+
+// Tìm kiếm admin - GIỮ NGUYÊN
+function searchAdmins() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    
+    if (searchTerm.trim() === '') {
+        filteredAdmins = [...allAdmins];
+    } else {
+        filteredAdmins = allAdmins.filter(admin => 
+            (admin.Username && admin.Username.toLowerCase().includes(searchTerm)) ||
+            (admin.FullName && admin.FullName.toLowerCase().includes(searchTerm)) ||
+            (admin.Email && admin.Email.toLowerCase().includes(searchTerm))
+        );
+    }
+    
+    currentPage = 1;
+    renderAdminsTable();
+}
+
+// Lọc admin theo trạng thái - GIỮ NGUYÊN
+function filterAdmins() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    
+    if (statusFilter === 'all') {
+        filteredAdmins = [...allAdmins];
+    } else if (statusFilter === 'active') {
+        filteredAdmins = allAdmins.filter(admin => admin.Status);
+    } else if (statusFilter === 'inactive') {
+        filteredAdmins = allAdmins.filter(admin => !admin.Status);
+    }
+    
+    currentPage = 1;
+    renderAdminsTable();
+}
+
+// Làm mới danh sách - SỬA
+async function refreshAdmins() {
+    await loadAdmins();
+    await loadAdminStats();
+}
+
+// Hiển thị modal thêm admin - GIỮ NGUYÊN
+function showAddAdminModal() {
+    document.getElementById('modalTitle').textContent = 'Thêm Admin Mới';
+    document.getElementById('adminForm').reset();
+    document.getElementById('adminId').value = '';
+    document.getElementById('password').required = true;
+    document.getElementById('confirmPassword').required = true;
+    document.getElementById('adminModal').style.display = 'block';
+}
+
+// Hiển thị modal sửa admin - SỬA
+async function editAdmin(accountId) {
+    try {
+        const response = await fetch(`/api/admin/${accountId}`, {
+            credentials: 'include' // Gửi cookies
+        });
+        
+        if (!response.ok) throw new Error('Lỗi khi tải thông tin admin');
+        
+        const admin = await response.json();
+        
+        document.getElementById('modalTitle').textContent = 'Sửa Thông Tin Admin';
+        document.getElementById('adminId').value = admin.AccountID;
+        document.getElementById('username').value = admin.Username;
+        document.getElementById('username').disabled = true;
+        document.getElementById('password').required = false;
+        document.getElementById('confirmPassword').required = false;
+        document.getElementById('fullName').value = admin.FullName || '';
+        document.getElementById('email').value = admin.Email || '';
+        document.getElementById('phone').value = admin.Phone || '';
+        document.getElementById('isSuperAdmin').value = admin.IsSuperAdmin ? 'true' : 'false';
+        document.getElementById('status').value = admin.Status ? 'true' : 'false';
+        
+        document.getElementById('adminModal').style.display = 'block';
+        
+    } catch (error) {
+        console.error('❌ Lỗi khi tải thông tin admin:', error);
+        alert('Không thể tải thông tin admin');
+    }
+}
+
+// Đóng modal admin - GIỮ NGUYÊN
+function closeAdminModal() {
+    document.getElementById('adminModal').style.display = 'none';
+    document.getElementById('username').disabled = false;
+}
+
+// Lưu admin (thêm/sửa) - SỬA
+async function saveAdmin(event) {
+    event.preventDefault();
+    
+    const adminId = document.getElementById('adminId').value;
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    // Kiểm tra mật khẩu khi thêm mới
+    if (!adminId && password !== confirmPassword) {
+        alert('Mật khẩu xác nhận không khớp!');
+        return;
+    }
+    
+    const formData = {
+        Username: document.getElementById('username').value,
+        FullName: document.getElementById('fullName').value,
+        Email: document.getElementById('email').value,
+        Phone: document.getElementById('phone').value,
+        IsSuperAdmin: document.getElementById('isSuperAdmin').value === 'true',
+        Status: document.getElementById('status').value === 'true'
+    };
+    
+    // Chỉ thêm mật khẩu nếu có (khi thêm mới hoặc đổi mật khẩu)
+    if (password) {
+        formData.Password = password;
+    }
+    
+    try {
+        const url = adminId ? `/api/admin/${adminId}` : '/api/admin';
+        const method = adminId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData),
+            credentials: 'include' // Gửi cookies
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Lỗi khi lưu admin');
+        }
+        
+        const result = await response.json();
+        console.log('✅ Admin đã được lưu:', result);
+        
+        closeAdminModal();
+        await refreshAdmins();
+        alert(adminId ? 'Cập nhật admin thành công!' : 'Thêm admin mới thành công!');
+        
+    } catch (error) {
+        console.error('❌ Lỗi khi lưu admin:', error);
+        alert('Lỗi khi lưu admin: ' + error.message);
+    }
+}
+
+// Xác nhận xóa admin - GIỮ NGUYÊN
+function confirmDelete(accountId) {
+    adminToDelete = accountId;
+    document.getElementById('confirmModal').style.display = 'block';
+}
+
+// Đóng modal xác nhận - GIỮ NGUYÊN
+function closeConfirmModal() {
+    document.getElementById('confirmModal').style.display = 'none';
+    adminToDelete = null;
+}
+
+// Xóa admin - SỬA
+async function deleteAdmin() {
+    if (!adminToDelete) return;
+    
+    try {
+        const response = await fetch(`/api/admin/${adminToDelete}`, {
+            method: 'DELETE',
+            credentials: 'include' // Gửi cookies
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Lỗi khi xóa admin');
+        }
+        
+        console.log('✅ Admin đã được xóa');
+        
+        closeConfirmModal();
+        await refreshAdmins();
+        alert('Xóa admin thành công!');
+        
+    } catch (error) {
+        console.error('❌ Lỗi khi xóa admin:', error);
+        alert('Lỗi khi xóa admin: ' + error.message);
+    }
+}
+
+// Gán sự kiện cho nút xác nhận xóa - GIỮ NGUYÊN
+document.getElementById('confirmDeleteBtn').addEventListener('click', deleteAdmin);
+
+// Hàm phụ trợ - GIỮ NGUYÊN
+function formatDate(dateString) {
+    if (!dateString) return 'Chưa có ngày';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN');
+}
+
+// Đóng modal khi click bên ngoài - GIỮ NGUYÊN
+window.onclick = function(event) {
+    const adminModal = document.getElementById('adminModal');
+    const confirmModal = document.getElementById('confirmModal');
+    
+    if (event.target === adminModal) {
+        closeAdminModal();
+    }
+    
+    if (event.target === confirmModal) {
+        closeConfirmModal();
+    }
+}
+</script>
+
+</body>
+</html>
